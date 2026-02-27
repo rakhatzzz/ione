@@ -1,0 +1,32 @@
+package com.diploma.ione.auth
+
+import jakarta.validation.constraints.Email
+import jakarta.validation.constraints.NotBlank
+import jakarta.validation.constraints.NotNull
+
+data class LoginRequest(
+    @field:Email @field:NotBlank val email: String,
+    @field:NotBlank val password: String
+)
+
+data class AuthResponse(
+    val accessToken: String,
+    val userId: Long,
+    val role: String
+)
+
+data class RegisterTeacherRequest(
+    @field:NotBlank val fullName: String,
+    @field:Email @field:NotBlank val email: String,
+    @field:NotBlank val password: String,
+    @field:NotNull val schoolId: Long
+)
+
+data class RegisterStudentRequest(
+    @field:NotBlank val fullName: String,
+    @field:Email @field:NotBlank val email: String,
+    @field:NotBlank val password: String,
+    @field:NotNull val schoolId: Long,
+    @field:NotNull val teacherId: Long,
+    val className: String? = null
+)
