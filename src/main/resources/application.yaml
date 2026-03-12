@@ -1,0 +1,25 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: ione
+  datasource:
+    url: jdbc:postgresql://localhost:5432/postgres
+    username: postgres
+    password: 20041202
+  jpa:
+    open-in-view: true
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+app:
+  media:
+    dir: "C:/school_app_media/"
+  jwt:
+    secret: "diploma_secure_jwt_secret_Ff8Dd9fA7xL2pQ5mV8sT4wZ586w3T47_uWu_WWS"
+    accessTokenMinutes: 120
