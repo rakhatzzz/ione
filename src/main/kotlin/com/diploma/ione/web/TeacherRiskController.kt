@@ -14,6 +14,13 @@ data class RiskStudentDto(
     val maxZone: String
 )
 
+data class TeacherStudentDto(
+    val id: Long,
+    val fullName: String,
+    val className: String?
+)
+
+
 @RestController
 @RequestMapping("/api/teacher")
 class TeacherRiskController(
@@ -64,6 +71,14 @@ class TeacherRiskController(
         }
 
         return result.sortedByDescending { severity(ZoneType.valueOf(it.maxZone)) }
+    }
+
+    @GetMapping("/students")
+    fun myStudents(): List<TeacherStudentDto> {
+        val teacherId = AuthUtil.currentUserId()
+        teacherRepo.findById(teacherId).orElseThrow { error("Teacher not found") }
+        val students = studentRepo.findAll().filter { it.teacher.id == teacherId }
+        return students.map { TeacherStudentDto(it.id!!, it.user.fullName, it.className) }
     }
 
     private fun severity(z: ZoneType): Int = when (z) {
