@@ -73,4 +73,21 @@ class AuthService(
         val token = jwt.generateToken(user.id!!, user.role)
         return AuthResponse(token, user.id!!, user.role.name, user.fullName)
     }
+
+    @Transactional
+    fun registerAdmin(req: RegisterAdminRequest): AuthResponse {
+        if (userRepo.existsByEmail(req.email)) error("Email already used")
+
+        val user = userRepo.save(
+            User(
+                fullName = req.fullName,
+                email = req.email,
+                passwordHash = encoder.encode(req.password),
+                role = Role.ADMIN
+            )
+        )
+
+        val token = jwt.generateToken(user.id!!, user.role)
+        return AuthResponse(token, user.id!!, user.role.name, user.fullName)
+    }
 }

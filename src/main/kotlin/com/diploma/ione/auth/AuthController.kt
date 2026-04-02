@@ -19,4 +19,7 @@ class AuthController(
 
     @PostMapping("/register/student")
     fun registerStudent(@RequestBody @Valid req: RegisterStudentRequest) = authService.registerStudent(req)
+
+    @PostMapping("/register/admin")
+    fun registerAdmin(@RequestBody @Valid req: RegisterAdminRequest) = authService.registerAdmin(req)
 }

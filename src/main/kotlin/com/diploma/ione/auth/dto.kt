@@ -31,3 +31,9 @@ data class RegisterStudentRequest(
     @field:NotNull val teacherId: Long,
     val className: String? = null
 )
+
+data class RegisterAdminRequest(
+    @field:NotBlank val fullName: String,
+    @field:Email @field:NotBlank val email: String,
+    @field:NotBlank val password: String
+)
