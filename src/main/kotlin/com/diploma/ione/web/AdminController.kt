@@ -22,7 +22,13 @@ data class AdminTeacherDto(val id: Long, val fullName: String, val students: Lis
 
 data class AdminStudentDto(val id: Long, val fullName: String, val className: String?)
 
-data class AdminCourseDto(val id: Long, val title: String, val lessons: List<AdminLessonDto>)
+data class AdminCourseDto(
+    val id: Long,
+    val title: String,
+    val description: String?,
+    val ageGroup: String?,
+    val lessons: List<AdminLessonDto>
+)
 
 data class AdminLessonDto(
     val id: Long,
@@ -113,7 +119,7 @@ class AdminController(
                         textContent = it.textContent
                     )
                 }
-            AdminCourseDto(course.id!!, course.title, nestedLessons)
+            AdminCourseDto(course.id!!, course.title, course.description, course.ageGroup, nestedLessons)
         }
         val tests = testRepo.findAll().map { AdminTestDto(it.id!!, it.title) }
         val scenarios =
@@ -134,7 +140,7 @@ class AdminController(
         val course =
                 Course(title = req.title, description = req.description, ageGroup = req.ageGroup)
         val saved = courseRepo.save(course)
-        return AdminCourseDto(saved.id!!, saved.title, emptyList())
+        return AdminCourseDto(saved.id!!, saved.title, saved.description, saved.ageGroup, emptyList())
     }
 
     @PostMapping("/courses/update/{id}")
@@ -149,7 +155,7 @@ class AdminController(
         val saved = courseRepo.save(course)
         val lessons = lessonRepo.findAllByCourseIdOrderByOrderNumberAsc(saved.id!!)
             .map { AdminLessonDto(it.id!!, it.title, it.orderNumber, it.videoPath, it.textContent) }
-        return AdminCourseDto(saved.id!!, saved.title, lessons)
+        return AdminCourseDto(saved.id!!, saved.title, saved.description, saved.ageGroup, lessons)
     }
 
     @PostMapping("/courses/delete/{id}")
