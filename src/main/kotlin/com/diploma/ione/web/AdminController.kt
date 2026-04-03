@@ -2,6 +2,12 @@ package com.diploma.ione.web
 
 import com.diploma.ione.domain.Course
 import com.diploma.ione.domain.Lesson
+import com.diploma.ione.domain.PsychologicalTest
+import com.diploma.ione.domain.TestCategory
+import com.diploma.ione.domain.TestQuestion
+import com.diploma.ione.domain.TestAnswerOption
+import com.diploma.ione.domain.CategoryZone
+import com.diploma.ione.domain.ZoneType
 import com.diploma.ione.repo.*
 import org.springframework.web.bind.annotation.GetMapping
 import org.springframework.web.bind.annotation.PostMapping
@@ -38,7 +44,41 @@ data class AdminLessonDto(
     val textContent: String?
 )
 
-data class AdminTestDto(val id: Long, val title: String)
+data class AdminTestDto(
+    val id: Long,
+    val title: String,
+    val description: String?,
+    val categories: List<AdminTestCategoryDto>
+)
+
+data class AdminTestCategoryDto(
+    val id: Long,
+    val name: String,
+    val description: String?,
+    val zones: List<AdminCategoryZoneDto>,
+    val questions: List<AdminTestQuestionDto>
+)
+
+data class AdminCategoryZoneDto(
+    val id: Long,
+    val zone: String,
+    val minScore: Int,
+    val maxScore: Int,
+    val priority: Int
+)
+
+data class AdminTestQuestionDto(
+    val id: Long,
+    val text: String,
+    val orderNumber: Int,
+    val answers: List<AdminTestAnswerDto>
+)
+
+data class AdminTestAnswerDto(
+    val id: Long,
+    val text: String,
+    val score: Int
+)
 
 data class AdminScenarioDto(val id: Long, val title: String)
 
@@ -61,6 +101,21 @@ data class UpdateLessonRequest(
     val orderNumber: Int?
 )
 
+data class CreateTestRequest(val title: String, val description: String?)
+data class UpdateTestRequest(val title: String?, val description: String?)
+
+data class CreateCategoryRequest(val testId: Long, val name: String, val description: String?)
+data class UpdateCategoryRequest(val name: String?, val description: String?)
+
+data class CreateCategoryZoneRequest(val categoryId: Long, val zone: String, val minScore: Int, val maxScore: Int, val priority: Int)
+data class UpdateCategoryZoneRequest(val zone: String?, val minScore: Int?, val maxScore: Int?, val priority: Int?)
+
+data class CreateTestQuestionRequest(val testId: Long, val categoryId: Long, val text: String, val orderNumber: Int)
+data class UpdateTestQuestionRequest(val text: String?, val orderNumber: Int?)
+
+data class CreateTestAnswerRequest(val questionId: Long, val text: String, val score: Int)
+data class UpdateTestAnswerRequest(val text: String?, val score: Int?)
+
 @RestController
 @RequestMapping("/api/admin")
 class AdminController(
@@ -70,6 +125,10 @@ class AdminController(
         private val courseRepo: CourseRepo,
         private val lessonRepo: LessonRepo,
         private val testRepo: PsychologicalTestRepo,
+        private val categoryRepo: TestCategoryRepo,
+        private val zoneRepo: CategoryZoneRepo,
+        private val questionRepo: TestQuestionRepo,
+        private val answerRepo: TestAnswerOptionRepo,
         private val scenarioRepo: ScenarioRepo
 ) {
     @GetMapping("/dashboard")
@@ -121,7 +180,26 @@ class AdminController(
                 }
             AdminCourseDto(course.id!!, course.title, course.description, course.ageGroup, nestedLessons)
         }
-        val tests = testRepo.findAll().map { AdminTestDto(it.id!!, it.title) }
+        val allCategories = categoryRepo.findAll().groupBy { it.test.id }
+        val allZones = zoneRepo.findAll().groupBy { it.category.id }
+        val allQuestions = questionRepo.findAll().groupBy { it.category.id }
+        val allAnswers = answerRepo.findAll().groupBy { it.question.id }
+
+        val tests = testRepo.findAll().map { test ->
+            val nestedCategories = (allCategories[test.id] ?: emptyList()).map { cat ->
+                val zones = (allZones[cat.id] ?: emptyList()).sortedBy { it.priority }.map { z ->
+                    AdminCategoryZoneDto(z.id!!, z.zone.name, z.minScore, z.maxScore, z.priority)
+                }
+                val questions = (allQuestions[cat.id] ?: emptyList()).sortedBy { it.orderNumber }.map { q ->
+                    val answers = (allAnswers[q.id] ?: emptyList()).map { a ->
+                        AdminTestAnswerDto(a.id!!, a.text, a.score)
+                    }
+                    AdminTestQuestionDto(q.id!!, q.text, q.orderNumber, answers)
+                }
+                AdminTestCategoryDto(cat.id!!, cat.name, cat.description, zones, questions)
+            }
+            AdminTestDto(test.id!!, test.title, test.description, nestedCategories)
+        }
         val scenarios =
                 scenarioRepo.findAll().map {
                     AdminScenarioDto(it.id!!, it.title ?: "Unnamed Scenario")
@@ -196,5 +274,165 @@ class AdminController(
     fun deleteLesson(@org.springframework.web.bind.annotation.PathVariable id: Long) {
         val lesson = lessonRepo.findById(id).orElseThrow { error("Lesson not found") }
         lessonRepo.delete(lesson)
+    }
+
+    // --- PSYCHOLOGICAL TESTS CRUD ---
+
+    @PostMapping("/tests/add")
+    fun createTest(@RequestBody req: CreateTestRequest): AdminTestDto {
+        val test = PsychologicalTest(title = req.title, description = req.description)
+        val saved = testRepo.save(test)
+        return AdminTestDto(saved.id!!, saved.title, saved.description, emptyList())
+    }
+
+    @PostMapping("/tests/update/{id}")
+    fun updateTest(
+        @org.springframework.web.bind.annotation.PathVariable id: Long,
+        @RequestBody req: UpdateTestRequest
+    ): AdminTestDto {
+        val test = testRepo.findById(id).orElseThrow { error("Test not found") }
+        if (req.title != null) test.title = req.title
+        if (req.description != null) test.description = req.description
+        val saved = testRepo.save(test)
+        
+        // Return fully populated (or just shallow, since frontend updates optimistic)
+        val categories = categoryRepo.findAllByTestId(saved.id!!).map { cat ->
+            val zones = zoneRepo.findAllByCategoryId(cat.id!!).map { z -> AdminCategoryZoneDto(z.id!!, z.zone.name, z.minScore, z.maxScore, z.priority) }
+            val questions = questionRepo.findAllByTestIdOrderByOrderNumberAsc(saved.id!!).filter { it.category.id == cat.id }.map { q ->
+                val answers = answerRepo.findAllByQuestionId(q.id!!).map { a -> AdminTestAnswerDto(a.id!!, a.text, a.score) }
+                AdminTestQuestionDto(q.id!!, q.text, q.orderNumber, answers)
+            }
+            AdminTestCategoryDto(cat.id!!, cat.name, cat.description, zones, questions)
+        }
+        return AdminTestDto(saved.id!!, saved.title, saved.description, categories)
+    }
+
+    @PostMapping("/tests/delete/{id}")
+    fun deleteTest(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        val test = testRepo.findById(id).orElseThrow { error("Test not found") }
+        testRepo.delete(test)
+    }
+
+    // --- TEST CATEGORIES ---
+
+    @PostMapping("/test-categories/add")
+    fun createCategory(@RequestBody req: CreateCategoryRequest): AdminTestCategoryDto {
+        val test = testRepo.findById(req.testId).orElseThrow { error("Test not found") }
+        val category = TestCategory(test = test, name = req.name, description = req.description)
+        val saved = categoryRepo.save(category)
+        return AdminTestCategoryDto(saved.id!!, saved.name, saved.description, emptyList(), emptyList())
+    }
+
+    @PostMapping("/test-categories/update/{id}")
+    fun updateCategory(
+        @org.springframework.web.bind.annotation.PathVariable id: Long,
+        @RequestBody req: UpdateCategoryRequest
+    ): AdminTestCategoryDto {
+        val cat = categoryRepo.findById(id).orElseThrow { error("Category not found") }
+        if (req.name != null) cat.name = req.name
+        if (req.description != null) cat.description = req.description
+        val saved = categoryRepo.save(cat)
+        
+        val zones = zoneRepo.findAllByCategoryId(saved.id!!).sortedBy { it.priority }.map { z -> AdminCategoryZoneDto(z.id!!, z.zone.name, z.minScore, z.maxScore, z.priority) }
+        val questions = questionRepo.findAllByTestIdOrderByOrderNumberAsc(saved.test.id!!).filter { it.category.id == saved.id }.map { q ->
+            val answers = answerRepo.findAllByQuestionId(q.id!!).map { a -> AdminTestAnswerDto(a.id!!, a.text, a.score) }
+            AdminTestQuestionDto(q.id!!, q.text, q.orderNumber, answers)
+        }
+        return AdminTestCategoryDto(saved.id!!, saved.name, saved.description, zones, questions)
+    }
+
+    @PostMapping("/test-categories/delete/{id}")
+    fun deleteCategory(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        val cat = categoryRepo.findById(id).orElseThrow { error("Category not found") }
+        categoryRepo.delete(cat)
+    }
+
+    // --- CATEGORY ZONES ---
+
+    @PostMapping("/category-zones/add")
+    fun createCategoryZone(@RequestBody req: CreateCategoryZoneRequest): AdminCategoryZoneDto {
+        val cat = categoryRepo.findById(req.categoryId).orElseThrow { error("Category not found") }
+        val zoneType = try { ZoneType.valueOf(req.zone.uppercase()) } catch(e: Exception) { ZoneType.GREEN }
+        val zone = CategoryZone(category = cat, zone = zoneType, minScore = req.minScore, maxScore = req.maxScore, priority = req.priority)
+        val saved = zoneRepo.save(zone)
+        return AdminCategoryZoneDto(saved.id!!, saved.zone.name, saved.minScore, saved.maxScore, saved.priority)
+    }
+
+    @PostMapping("/category-zones/update/{id}")
+    fun updateCategoryZone(
+        @org.springframework.web.bind.annotation.PathVariable id: Long,
+        @RequestBody req: UpdateCategoryZoneRequest
+    ): AdminCategoryZoneDto {
+        val zone = zoneRepo.findById(id).orElseThrow { error("Zone not found") }
+        if (req.zone != null) zone.zone = try { ZoneType.valueOf(req.zone.uppercase()) } catch(e: Exception) { zone.zone }
+        if (req.minScore != null) zone.minScore = req.minScore
+        if (req.maxScore != null) zone.maxScore = req.maxScore
+        if (req.priority != null) zone.priority = req.priority
+        val saved = zoneRepo.save(zone)
+        return AdminCategoryZoneDto(saved.id!!, saved.zone.name, saved.minScore, saved.maxScore, saved.priority)
+    }
+
+    @PostMapping("/category-zones/delete/{id}")
+    fun deleteCategoryZone(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        val zone = zoneRepo.findById(id).orElseThrow { error("Zone not found") }
+        zoneRepo.delete(zone)
+    }
+
+    // --- TEST QUESTIONS ---
+
+    @PostMapping("/test-questions/add")
+    fun createQuestion(@RequestBody req: CreateTestQuestionRequest): AdminTestQuestionDto {
+        val test = testRepo.findById(req.testId).orElseThrow { error("Test not found") }
+        val cat = categoryRepo.findById(req.categoryId).orElseThrow { error("Category not found") }
+        val q = TestQuestion(test = test, category = cat, text = req.text, orderNumber = req.orderNumber)
+        val saved = questionRepo.save(q)
+        return AdminTestQuestionDto(saved.id!!, saved.text, saved.orderNumber, emptyList())
+    }
+
+    @PostMapping("/test-questions/update/{id}")
+    fun updateQuestion(
+        @org.springframework.web.bind.annotation.PathVariable id: Long,
+        @RequestBody req: UpdateTestQuestionRequest
+    ): AdminTestQuestionDto {
+        val q = questionRepo.findById(id).orElseThrow { error("Question not found") }
+        if (req.text != null) q.text = req.text
+        if (req.orderNumber != null) q.orderNumber = req.orderNumber
+        val saved = questionRepo.save(q)
+        val answers = answerRepo.findAllByQuestionId(saved.id!!).map { a -> AdminTestAnswerDto(a.id!!, a.text, a.score) }
+        return AdminTestQuestionDto(saved.id!!, saved.text, saved.orderNumber, answers)
+    }
+
+    @PostMapping("/test-questions/delete/{id}")
+    fun deleteQuestion(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        val q = questionRepo.findById(id).orElseThrow { error("Question not found") }
+        questionRepo.delete(q)
+    }
+
+    // --- TEST ANSWER OPTIONS ---
+
+    @PostMapping("/test-answers/add")
+    fun createAnswer(@RequestBody req: CreateTestAnswerRequest): AdminTestAnswerDto {
+        val q = questionRepo.findById(req.questionId).orElseThrow { error("Question not found") }
+        val a = TestAnswerOption(question = q, text = req.text, score = req.score)
+        val saved = answerRepo.save(a)
+        return AdminTestAnswerDto(saved.id!!, saved.text, saved.score)
+    }
+
+    @PostMapping("/test-answers/update/{id}")
+    fun updateAnswer(
+        @org.springframework.web.bind.annotation.PathVariable id: Long,
+        @RequestBody req: UpdateTestAnswerRequest
+    ): AdminTestAnswerDto {
+        val a = answerRepo.findById(id).orElseThrow { error("Answer not found") }
+        if (req.text != null) a.text = req.text
+        if (req.score != null) a.score = req.score
+        val saved = answerRepo.save(a)
+        return AdminTestAnswerDto(saved.id!!, saved.text, saved.score)
+    }
+
+    @PostMapping("/test-answers/delete/{id}")
+    fun deleteAnswer(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        val a = answerRepo.findById(id).orElseThrow { error("Answer not found") }
+        answerRepo.delete(a)
     }
 }
