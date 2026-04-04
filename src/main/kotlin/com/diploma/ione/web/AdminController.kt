@@ -220,7 +220,13 @@ class AdminController(
         val scenarios =
                 scenarioRepo.findAll().map { s ->
                     val opts = (allScenarioOptions[s.id] ?: emptyList()).map { o ->
-                        AdminScenarioOptionDto(o.id!!, o.optionText, o.resultText, o.resultImagePath, o.score)
+                        AdminScenarioOptionDto(
+                            id = o.id!!, 
+                            optionText = o.optionText ?: "", 
+                            resultText = o.resultText ?: "", 
+                            resultImagePath = o.resultImagePath, 
+                            score = o.score
+                        )
                     }
                     AdminScenarioDto(
                         id = s.id!!,
