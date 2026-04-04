@@ -80,7 +80,22 @@ data class AdminTestAnswerDto(
     val score: Int
 )
 
-data class AdminScenarioDto(val id: Long, val title: String)
+data class AdminScenarioDto(
+    val id: Long,
+    val lessonId: Long,
+    val title: String,
+    val description: String?,
+    val baseImagePath: String?,
+    val options: List<AdminScenarioOptionDto>
+)
+
+data class AdminScenarioOptionDto(
+    val id: Long,
+    val optionText: String,
+    val resultText: String,
+    val resultImagePath: String?,
+    val score: Int
+)
 
 data class CreateCourseRequest(val title: String, val description: String?, val ageGroup: String?)
 
@@ -129,7 +144,8 @@ class AdminController(
         private val zoneRepo: CategoryZoneRepo,
         private val questionRepo: TestQuestionRepo,
         private val answerRepo: TestAnswerOptionRepo,
-        private val scenarioRepo: ScenarioRepo
+        private val scenarioRepo: ScenarioRepo,
+        private val scenarioOptionRepo: ScenarioOptionRepo
 ) {
     @GetMapping("/dashboard")
     fun getDashboardData(): AdminDashboardDto {
@@ -200,9 +216,20 @@ class AdminController(
             }
             AdminTestDto(test.id!!, test.title, test.description, nestedCategories)
         }
+        val allScenarioOptions = scenarioOptionRepo.findAll().groupBy { it.scenario.id }
         val scenarios =
-                scenarioRepo.findAll().map {
-                    AdminScenarioDto(it.id!!, it.title ?: "Unnamed Scenario")
+                scenarioRepo.findAll().map { s ->
+                    val opts = (allScenarioOptions[s.id] ?: emptyList()).map { o ->
+                        AdminScenarioOptionDto(o.id!!, o.optionText, o.resultText, o.resultImagePath, o.score)
+                    }
+                    AdminScenarioDto(
+                        id = s.id!!,
+                        lessonId = s.lesson.id!!,
+                        title = s.title ?: "Unnamed Scenario",
+                        description = s.description,
+                        baseImagePath = s.baseImagePath,
+                        options = opts
+                    )
                 }
 
         return AdminDashboardDto(
