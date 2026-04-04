@@ -50,7 +50,8 @@ class SecurityConfig(
             it.requestMatchers(
                 "/api/auth/**",
                 "/api/public/**",
-                "/media/**"
+                "/media/**",
+                "/error"
             ).permitAll()
             it.requestMatchers("/api/admin/**").hasRole("ADMIN")
             it.requestMatchers("/api/teacher/**").hasRole("TEACHER")
