@@ -3,6 +3,7 @@ package com.diploma.ione.web
 import com.diploma.ione.domain.Course
 import com.diploma.ione.domain.Lesson
 import com.diploma.ione.domain.PsychologicalTest
+import com.diploma.ione.domain.School
 import com.diploma.ione.domain.TestCategory
 import com.diploma.ione.domain.TestQuestion
 import com.diploma.ione.domain.TestAnswerOption
@@ -97,6 +98,14 @@ data class AdminScenarioOptionDto(
     val score: Int
 )
 
+data class CreateSchoolRequest(val name: String, val address: String?)
+
+data class UpdateSchoolRequest(val name: String?, val address: String?)
+
+data class UpdateTeacherRequest(val fullName: String?)
+
+data class UpdateStudentRequest(val fullName: String?, val className: String?)
+
 data class CreateCourseRequest(val title: String, val description: String?, val ageGroup: String?)
 
 data class UpdateCourseRequest(val title: String?, val description: String?, val ageGroup: String?)
@@ -134,6 +143,7 @@ data class UpdateTestAnswerRequest(val text: String?, val score: Int?)
 @RestController
 @RequestMapping("/api/admin")
 class AdminController(
+        private val userRepo: UserRepo,
         private val schoolRepo: SchoolRepo,
         private val teacherRepo: TeacherRepo,
         private val studentRepo: StudentRepo,
@@ -244,6 +254,68 @@ class AdminController(
                 tests = tests,
                 scenarios = scenarios
         )
+    }
+
+    // --- SCHOOLS CRUD ---
+
+    @PostMapping("/schools/add")
+    fun createSchool(@RequestBody req: CreateSchoolRequest): AdminSchoolDto {
+        // Предполагается, что в сущности School есть поля name и address
+        val school = School(name = req.name, address = req.address)
+        val saved = schoolRepo.save(school)
+        return AdminSchoolDto(saved.id!!, saved.name, emptyList())
+    }
+
+    @PostMapping("/schools/update/{id}")
+    fun updateSchool(@org.springframework.web.bind.annotation.PathVariable id: Long, @RequestBody req: UpdateSchoolRequest): AdminSchoolDto {
+        val school = schoolRepo.findById(id).orElseThrow { error("School not found") }
+        if (req.name != null) school.name = req.name
+        if (req.address != null) school.address = req.address
+        val saved = schoolRepo.save(school)
+        return AdminSchoolDto(saved.id!!, saved.name, emptyList()) // Возвращаем пустой список учителей для простоты ответа
+    }
+
+    @PostMapping("/schools/delete/{id}")
+    fun deleteSchool(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        schoolRepo.deleteById(id)
+    }
+
+    // --- TEACHERS CRUD ---
+
+    @PostMapping("/teachers/update/{id}")
+    fun updateTeacher(@org.springframework.web.bind.annotation.PathVariable id: Long, @RequestBody req: UpdateTeacherRequest): AdminTeacherDto {
+        val teacher = teacherRepo.findById(id).orElseThrow { error("Teacher not found") }
+        req.fullName?.let {
+            teacher.user.fullName = it
+            userRepo.save(teacher.user)
+        }
+        return AdminTeacherDto(teacher.id!!, teacher.user.fullName, emptyList())
+    }
+
+    @PostMapping("/teachers/delete/{id}")
+    fun deleteTeacher(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        teacherRepo.deleteById(id)
+        userRepo.deleteById(id)
+    }
+
+    // --- STUDENTS CRUD ---
+
+    @PostMapping("/students/update/{id}")
+    fun updateStudent(@org.springframework.web.bind.annotation.PathVariable id: Long, @RequestBody req: UpdateStudentRequest): AdminStudentDto {
+        val student = studentRepo.findById(id).orElseThrow { error("Student not found") }
+        req.fullName?.let {
+            student.user.fullName = it
+            userRepo.save(student.user)
+        }
+        req.className?.let { student.className = it }
+        studentRepo.save(student)
+        return AdminStudentDto(student.id!!, student.user.fullName, student.className)
+    }
+
+    @PostMapping("/students/delete/{id}")
+    fun deleteStudent(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        studentRepo.deleteById(id)
+        userRepo.deleteById(id)
     }
 
     @PostMapping("/courses/add")
