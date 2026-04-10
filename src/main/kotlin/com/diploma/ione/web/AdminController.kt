@@ -277,6 +277,18 @@ class AdminController(
 
     @PostMapping("/schools/delete/{id}")
     fun deleteSchool(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        // Удаляем всех учеников школы
+        val students = studentRepo.findAll().filter { it.school.id == id }
+        students.forEach {
+            studentRepo.deleteById(it.id!!)
+            userRepo.deleteById(it.id!!)
+        }
+        // Удаляем всех учителей школы
+        val teachers = teacherRepo.findAll().filter { it.school.id == id }
+        teachers.forEach {
+            teacherRepo.deleteById(it.id!!)
+            userRepo.deleteById(it.id!!)
+        }
         schoolRepo.deleteById(id)
     }
 
@@ -294,6 +306,12 @@ class AdminController(
 
     @PostMapping("/teachers/delete/{id}")
     fun deleteTeacher(@org.springframework.web.bind.annotation.PathVariable id: Long) {
+        // Удаляем всех учеников этого учителя
+        val students = studentRepo.findAll().filter { it.teacher.id == id }
+        students.forEach {
+            studentRepo.deleteById(it.id!!)
+            userRepo.deleteById(it.id!!)
+        }
         teacherRepo.deleteById(id)
         userRepo.deleteById(id)
     }
