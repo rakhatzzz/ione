@@ -28,3 +28,16 @@ data class StudentCourseProgressDto(
     val completedLessons: Int,
     val completed: Boolean
 )
+
+data class StudentScenarioOptionDto(
+    val id: Long,
+    val optionText: String
+)
+
+data class StudentLessonScenarioDto(
+    val available: Boolean,
+    val scenarioId: Long? = null,
+    val title: String? = null,
+    val description: String? = null,
+    val options: List<StudentScenarioOptionDto> = emptyList()
+)

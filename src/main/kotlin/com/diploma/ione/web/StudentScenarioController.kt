@@ -17,6 +17,23 @@ class StudentScenarioController(
     private val optionRepo: ScenarioOptionRepo,
     private val answerRepo: StudentScenarioAnswerRepo
 ) {
+    @GetMapping("/lessons/{lessonId}/scenario")
+    fun getLessonScenario(@PathVariable lessonId: Long): StudentLessonScenarioDto {
+        val scenario = scenarioRepo.findByLessonId(lessonId).orElse(null)
+            ?: return StudentLessonScenarioDto(available = false)
+
+        val options = optionRepo.findAllByScenarioId(scenario.id!!)
+            .map { StudentScenarioOptionDto(it.id!!, it.optionText) }
+
+        return StudentLessonScenarioDto(
+            available = true,
+            scenarioId = scenario.id,
+            title = scenario.title,
+            description = scenario.description,
+            options = options
+        )
+    }
+
     @PostMapping("/scenarios/{scenarioId}/answer")
     fun answer(@PathVariable scenarioId: Long, @RequestBody req: ScenarioAnswerRequest): Map<String, Any?> {
         val studentId = AuthUtil.currentUserId()
