@@ -19,17 +19,25 @@ class StudentProgressController(
     @PostMapping("/lessons/{lessonId}/complete")
     fun completeLesson(@PathVariable lessonId: Long): Map<String, Any> {
         val studentId = AuthUtil.currentUserId()
-        val student = studentRepo.findById(studentId).orElseThrow { error("Student not found") }
-        val lesson = lessonRepo.findById(lessonId).orElseThrow { error("Lesson not found") }
+        val student = studentRepo.findById(studentId).orElseThrow { RuntimeException("Student not found") }
+        val lesson = lessonRepo.findById(lessonId).orElseThrow { RuntimeException("Lesson not found") }
 
         val now = LocalDateTime.now()
         val progress = progressRepo.findByStudentIdAndLessonId(studentId, lessonId)
-            ?: StudentLessonProgress(student = student, lesson = lesson)
-
-        if (progress.startedAt == null) progress.startedAt = now
-        progress.status = LessonProgressStatus.COMPLETED
-        progress.completedAt = now
-        progress.updatedAt = now
+            ?.apply {
+                status = LessonProgressStatus.COMPLETED
+                completedAt = now
+                updatedAt = now
+                if (startedAt == null) startedAt = now
+            }
+            ?: StudentLessonProgress(
+                student = student,
+                lesson = lesson,
+                status = LessonProgressStatus.COMPLETED,
+                startedAt = now,
+                completedAt = now,
+                updatedAt = now
+            )
 
         progressRepo.save(progress)
 

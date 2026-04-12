@@ -44,7 +44,7 @@ class AuthService(
             )
         )
 
-        teacherRepo.save(Teacher(user = user, school = school))
+        teacherRepo.save(Teacher(id = user.id, user = user, school = school))
 
         val token = jwt.generateToken(user.id!!, user.role)
         return AuthResponse(token, user.id!!, user.role.name, user.fullName)
@@ -68,7 +68,7 @@ class AuthService(
             )
         )
 
-        studentRepo.save(Student(user = user, school = school, teacher = teacher, className = req.className))
+        studentRepo.save(Student(id = user.id, user = user, school = school, teacher = teacher, className = req.className))
 
         val token = jwt.generateToken(user.id!!, user.role)
         return AuthResponse(token, user.id!!, user.role.name, user.fullName)
