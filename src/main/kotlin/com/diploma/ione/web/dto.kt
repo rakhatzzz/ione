@@ -36,8 +36,17 @@ data class StudentScenarioOptionDto(
 
 data class StudentLessonScenarioDto(
     val available: Boolean,
+    val completed: Boolean = false,
+    /** false, если для урока вообще нет сценария в системе */
+    val hasScenario: Boolean = false,
     val scenarioId: Long? = null,
     val title: String? = null,
     val description: String? = null,
-    val options: List<StudentScenarioOptionDto> = emptyList()
+    val baseImageUrl: String? = null,
+    val options: List<StudentScenarioOptionDto> = emptyList(),
+    /** Пояснение, почему тест недоступен (урок не завершён и т.п.) */
+    val message: String? = null,
+    val selectedOptionText: String? = null,
+    val resultText: String? = null,
+    val resultImageUrl: String? = null
 )
