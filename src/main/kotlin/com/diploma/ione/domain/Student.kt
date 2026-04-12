@@ -6,11 +6,11 @@ import jakarta.persistence.*
 @Table(name = "students")
 class Student(
     @Id
-    var id: Long? = null, // = user.id
+    var id: Long? = null,
 
-    @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
+    @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST, CascadeType.MERGE])
     @MapsId
-    @JoinColumn(name = "id")
+    @JoinColumn(name = "id", nullable = false, unique = true)
     var user: User,
 
     @ManyToOne(fetch = FetchType.LAZY)

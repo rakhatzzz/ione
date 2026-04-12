@@ -47,11 +47,12 @@ class AuthService(
             school = school
         )
 
-        // Save Teacher - cascade=PERSIST will save User first and @MapsId will copy ID
+        // Save teacher - cascade=PERSIST will save user automatically
         teacherRepo.saveAndFlush(teacher)
 
-        val token = jwt.generateToken(user.id!!, user.role)
-        return AuthResponse(token, user.id!!, user.role.name, user.fullName)
+        val userId = user.id ?: error("Failed to save user")
+        val token = jwt.generateToken(userId, user.role)
+        return AuthResponse(token, userId, user.role.name, user.fullName)
     }
 
     @Transactional
@@ -77,11 +78,13 @@ class AuthService(
             className = req.className
         )
 
-        // Save Student - cascade=PERSIST will save User first and @MapsId will copy ID
+        // Save student - cascade=PERSIST will save user automatically
         studentRepo.saveAndFlush(student)
 
-        val token = jwt.generateToken(user.id!!, user.role)
-        return AuthResponse(token, user.id!!, user.role.name, user.fullName)
+        val userId = user.id ?: error("Failed to save user")
+        val studentId = student.id ?: error("Failed to save student")
+        val token = jwt.generateToken(userId, user.role)
+        return AuthResponse(token, userId, user.role.name, user.fullName, studentId)
     }
 
     @Transactional
