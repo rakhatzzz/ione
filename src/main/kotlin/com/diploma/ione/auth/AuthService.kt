@@ -35,27 +35,23 @@ class AuthService(
         if (userRepo.existsByEmail(req.email)) error("Email already used")
         val school = schoolRepo.findById(req.schoolId).orElseThrow { error("School not found") }
 
-        // 1. Save User first and get its ID
         val user = User(
             fullName = req.fullName,
             email = req.email,
             passwordHash = encoder.encode(req.password),
             role = Role.TEACHER
         )
-        val savedUser = userRepo.saveAndFlush(user)  // Saves and flushes to DB immediately
 
-        // 2. Create Teacher with the User's ID from @MapsId
         val teacher = Teacher(
-            id = savedUser.id,  // Explicitly set ID for @MapsId
-            user = savedUser,
+            user = user,
             school = school
         )
 
-        // 3. Save Teacher
+        // Save Teacher - cascade=PERSIST will save User first and @MapsId will copy ID
         teacherRepo.saveAndFlush(teacher)
 
-        val token = jwt.generateToken(savedUser.id!!, savedUser.role)
-        return AuthResponse(token, savedUser.id!!, savedUser.role.name, savedUser.fullName)
+        val token = jwt.generateToken(user.id!!, user.role)
+        return AuthResponse(token, user.id!!, user.role.name, user.fullName)
     }
 
     @Transactional
@@ -67,29 +63,25 @@ class AuthService(
         // защита: ученик должен выбирать учителя той же школы
         if (teacher.school.id != school.id) error("Teacher must be from the same school")
 
-        // 1. Save User first and get its ID
         val user = User(
             fullName = req.fullName,
             email = req.email,
             passwordHash = encoder.encode(req.password),
             role = Role.STUDENT
         )
-        val savedUser = userRepo.saveAndFlush(user)  // Saves and flushes to DB immediately
 
-        // 2. Create Student with the User's ID from @MapsId
         val student = Student(
-            id = savedUser.id,  // Explicitly set ID for @MapsId
-            user = savedUser,
+            user = user,
             school = school,
             teacher = teacher,
             className = req.className
         )
 
-        // 3. Save Student
+        // Save Student - cascade=PERSIST will save User first and @MapsId will copy ID
         studentRepo.saveAndFlush(student)
 
-        val token = jwt.generateToken(savedUser.id!!, savedUser.role)
-        return AuthResponse(token, savedUser.id!!, savedUser.role.name, savedUser.fullName)
+        val token = jwt.generateToken(user.id!!, user.role)
+        return AuthResponse(token, user.id!!, user.role.name, user.fullName)
     }
 
     @Transactional

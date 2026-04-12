@@ -8,7 +8,7 @@ class Teacher(
     @Id
     var id: Long? = null, // = user.id
 
-    @OneToOne(fetch = FetchType.LAZY)
+    @OneToOne(fetch = FetchType.LAZY, cascade = [CascadeType.PERSIST])
     @MapsId
     @JoinColumn(name = "id")
     var user: User,
