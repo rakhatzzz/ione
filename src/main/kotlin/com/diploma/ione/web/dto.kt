@@ -21,3 +21,10 @@ data class StudentLessonProgressDto(
     val status: String,
     val completedAt: String?
 )
+
+data class StudentCourseProgressDto(
+    val courseId: Long,
+    val totalLessons: Int,
+    val completedLessons: Int,
+    val completed: Boolean
+)
