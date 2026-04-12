@@ -16,6 +16,20 @@ class StudentProgressController(
     private val lessonRepo: LessonRepo,
     private val progressRepo: StudentLessonProgressRepo
 ) {
+    @GetMapping("/courses/{courseId}/lesson-progress")
+    fun getCourseLessonProgress(@PathVariable courseId: Long): List<StudentLessonProgressDto> {
+        val studentId = AuthUtil.currentUserId()
+
+        return progressRepo.findAllByStudentIdAndLessonCourseId(studentId, courseId)
+            .map {
+                StudentLessonProgressDto(
+                    lessonId = it.lesson.id!!,
+                    status = it.status.name,
+                    completedAt = it.completedAt?.toString()
+                )
+            }
+    }
+
     @PostMapping("/lessons/{lessonId}/complete")
     fun completeLesson(@PathVariable lessonId: Long): Map<String, Any> {
         val userId = AuthUtil.currentUserId()

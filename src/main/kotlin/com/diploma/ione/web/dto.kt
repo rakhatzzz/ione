@@ -15,3 +15,9 @@ data class LessonDto(
     val videoUrl: String?,
     val textContent: String?
 )
+
+data class StudentLessonProgressDto(
+    val lessonId: Long,
+    val status: String,
+    val completedAt: String?
+)
