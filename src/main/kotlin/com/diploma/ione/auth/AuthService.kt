@@ -35,19 +35,27 @@ class AuthService(
         if (userRepo.existsByEmail(req.email)) error("Email already used")
         val school = schoolRepo.findById(req.schoolId).orElseThrow { error("School not found") }
 
-        val user = userRepo.save(
-            User(
-                fullName = req.fullName,
-                email = req.email,
-                passwordHash = encoder.encode(req.password),
-                role = Role.TEACHER
-            )
+        // 1. Save User first and get its ID
+        val user = User(
+            fullName = req.fullName,
+            email = req.email,
+            passwordHash = encoder.encode(req.password),
+            role = Role.TEACHER
+        )
+        val savedUser = userRepo.saveAndFlush(user)  // Saves and flushes to DB immediately
+
+        // 2. Create Teacher with the User's ID from @MapsId
+        val teacher = Teacher(
+            id = savedUser.id,  // Explicitly set ID for @MapsId
+            user = savedUser,
+            school = school
         )
 
-        teacherRepo.save(Teacher(id = user.id, user = user, school = school))
+        // 3. Save Teacher
+        teacherRepo.saveAndFlush(teacher)
 
-        val token = jwt.generateToken(user.id!!, user.role)
-        return AuthResponse(token, user.id!!, user.role.name, user.fullName)
+        val token = jwt.generateToken(savedUser.id!!, savedUser.role)
+        return AuthResponse(token, savedUser.id!!, savedUser.role.name, savedUser.fullName)
     }
 
     @Transactional
@@ -59,19 +67,29 @@ class AuthService(
         // защита: ученик должен выбирать учителя той же школы
         if (teacher.school.id != school.id) error("Teacher must be from the same school")
 
-        val user = userRepo.save(
-            User(
-                fullName = req.fullName,
-                email = req.email,
-                passwordHash = encoder.encode(req.password),
-                role = Role.STUDENT
-            )
+        // 1. Save User first and get its ID
+        val user = User(
+            fullName = req.fullName,
+            email = req.email,
+            passwordHash = encoder.encode(req.password),
+            role = Role.STUDENT
+        )
+        val savedUser = userRepo.saveAndFlush(user)  // Saves and flushes to DB immediately
+
+        // 2. Create Student with the User's ID from @MapsId
+        val student = Student(
+            id = savedUser.id,  // Explicitly set ID for @MapsId
+            user = savedUser,
+            school = school,
+            teacher = teacher,
+            className = req.className
         )
 
-        studentRepo.save(Student(id = user.id, user = user, school = school, teacher = teacher, className = req.className))
+        // 3. Save Student
+        studentRepo.saveAndFlush(student)
 
-        val token = jwt.generateToken(user.id!!, user.role)
-        return AuthResponse(token, user.id!!, user.role.name, user.fullName)
+        val token = jwt.generateToken(savedUser.id!!, savedUser.role)
+        return AuthResponse(token, savedUser.id!!, savedUser.role.name, savedUser.fullName)
     }
 
     @Transactional

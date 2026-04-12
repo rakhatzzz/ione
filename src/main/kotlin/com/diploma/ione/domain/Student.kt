@@ -3,6 +3,7 @@ package com.diploma.ione.domain
 import jakarta.persistence.*
 
 @Entity
+@Table(name = "students")
 class Student(
     @Id
     var id: Long? = null, // = user.id
