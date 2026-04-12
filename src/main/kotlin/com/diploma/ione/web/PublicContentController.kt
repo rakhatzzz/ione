@@ -2,14 +2,22 @@ package com.diploma.ione.web
 
 import com.diploma.ione.repo.CourseRepo
 import com.diploma.ione.repo.LessonRepo
+import com.diploma.ione.repo.SchoolRepo
+import com.diploma.ione.repo.TeacherRepo
 import jakarta.servlet.http.HttpServletRequest
 import org.springframework.web.bind.annotation.*
+
+data class PublicSchoolDto(val id: Long, val name: String)
+
+data class PublicTeacherDto(val id: Long, val fullName: String)
 
 @RestController
 @RequestMapping("/api/public")
 class PublicContentController(
     private val courseRepo: CourseRepo,
-    private val lessonRepo: LessonRepo
+    private val lessonRepo: LessonRepo,
+    private val schoolRepo: SchoolRepo,
+    private val teacherRepo: TeacherRepo
 ) {
     @GetMapping("/courses")
     fun courses(): List<CourseDto> =
@@ -49,5 +57,27 @@ class PublicContentController(
             videoUrl = l.videoPath?.let { "$baseUrl/media/$it" },
             textContent = l.textContent
         )
+    }
+
+    @GetMapping("/schools")
+    fun getSchools(): List<PublicSchoolDto> =
+        schoolRepo.findAll().map {
+            PublicSchoolDto(
+                id = it.id!!,
+                name = it.name
+            )
+        }
+
+    @GetMapping("/schools/{schoolId}/teachers")
+    fun getTeachersBySchool(@PathVariable schoolId: Long): List<PublicTeacherDto> {
+        val school = schoolRepo.findById(schoolId).orElseThrow { RuntimeException("School not found") }
+        return teacherRepo.findAll()
+            .filter { it.school.id == schoolId }
+            .map {
+                PublicTeacherDto(
+                    id = it.id!!,
+                    fullName = it.user.fullName
+                )
+            }
     }
 }
