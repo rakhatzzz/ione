@@ -27,6 +27,16 @@ interface TestAnswerOptionRepo : JpaRepository<TestAnswerOption, Long> {
 interface TestAttemptRepo : JpaRepository<TestAttempt, Long> {
     fun findAllByStudentIdAndTestIdOrderByStartedAtDesc(studentId: Long, testId: Long): List<TestAttempt>
 
+    fun findAllByStudentIdOrderByStartedAtDesc(studentId: Long): List<TestAttempt>
+
+    @Query("""
+        select a from TestAttempt a
+        join fetch a.test t
+        where a.student.id = :studentId
+        order by a.startedAt desc
+    """)
+    fun findAllByStudentIdWithTestOrderByStartedAtDesc(@Param("studentId") studentId: Long): List<TestAttempt>
+
     @Query("""
         select a from TestAttempt a
         join fetch a.student s
