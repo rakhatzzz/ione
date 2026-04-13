@@ -6,15 +6,57 @@ import com.diploma.ione.repo.*
 import com.diploma.ione.service.TestScoringService
 import org.springframework.web.bind.annotation.*
 
+data class TeacherAttemptListItemDto(
+    val attemptId: Long,
+    val startedAt: String,
+    val finishedAt: String?,
+    val maxZone: String
+)
+
 @RestController
 @RequestMapping("/api/teacher")
 class TeacherAttemptController(
     private val teacherRepo: TeacherRepo,
+    private val studentRepo: StudentRepo,
     private val attemptRepo: TestAttemptRepo,
     private val attemptAnswerRepo: TestAttemptAnswerRepo,
     private val categoryRepo: TestCategoryRepo,
     private val scoring: TestScoringService
 ) {
+
+    /**
+     * All finished attempts for a specific student+test (student must belong to current teacher).
+     * Lightweight list used to render "attempt history" in teacher UI.
+     */
+    @GetMapping("/tests/students/{studentId}/tests/{testId}/attempts")
+    fun studentTestAttempts(
+        @PathVariable studentId: Long,
+        @PathVariable testId: Long
+    ): List<TeacherAttemptListItemDto> {
+        val teacherId = AuthUtil.currentUserId()
+        teacherRepo.findById(teacherId).orElseThrow { error("Teacher not found") }
+
+        val student = studentRepo.findById(studentId).orElseThrow { error("Student not found") }
+        if (student.teacher.id != teacherId) error("Forbidden: not your student")
+
+        val attempts = attemptRepo.findAllByStudentIdAndTestIdOrderByStartedAtDesc(studentId, testId)
+            .filter { it.isFinished }
+
+        return attempts.map { a ->
+            val raw = attemptAnswerRepo.sumScoresByCategory(a.id!!)
+            val scoresByCategory = raw.associate {
+                (it[0] as Number).toLong() to (it[1] as Number).toInt()
+            }
+            val (_, maxZone) = scoring.resolveZones(scoresByCategory)
+
+            TeacherAttemptListItemDto(
+                attemptId = a.id!!,
+                startedAt = a.startedAt.toString(),
+                finishedAt = a.finishedAt?.toString(),
+                maxZone = maxZone.name
+            )
+        }
+    }
 
     @GetMapping("/test-attempts/{attemptId}")
     fun attemptDetails(@PathVariable attemptId: Long): TeacherAttemptDetailsDto {
