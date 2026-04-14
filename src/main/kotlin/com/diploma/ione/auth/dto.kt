@@ -16,7 +16,9 @@ data class AuthResponse(
     val fullName: String,
     val studentId: Long? = null,  // Only for STUDENT role
     val teacherFullName: String? = null,
-    val className: String? = null
+    val className: String? = null,
+    val schoolName: String? = null,
+    val homeroomClass: String? = null
 )
 
 data class RegisterTeacherRequest(

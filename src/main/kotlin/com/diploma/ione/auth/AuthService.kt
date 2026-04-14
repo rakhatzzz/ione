@@ -27,7 +27,34 @@ class AuthService(
             error("Invalid email or password")
         }
         val token = jwt.generateToken(user.id!!, user.role)
-        return AuthResponse(token, user.id!!, user.role.name, user.fullName)
+        val userId = user.id!!
+        return when (user.role) {
+            Role.STUDENT -> {
+                val student = studentRepo.findById(userId).orElse(null)
+                AuthResponse(
+                    accessToken = token,
+                    userId = userId,
+                    role = user.role.name,
+                    fullName = user.fullName,
+                    studentId = student?.id,
+                    teacherFullName = student?.teacher?.user?.fullName,
+                    className = student?.className,
+                    schoolName = student?.school?.name
+                )
+            }
+            Role.TEACHER -> {
+                val teacher = teacherRepo.findById(userId).orElse(null)
+                AuthResponse(
+                    accessToken = token,
+                    userId = userId,
+                    role = user.role.name,
+                    fullName = user.fullName,
+                    schoolName = teacher?.school?.name,
+                    homeroomClass = teacher?.homeroomClass
+                )
+            }
+            else -> AuthResponse(token, userId, user.role.name, user.fullName)
+        }
     }
 
     @Transactional
@@ -57,7 +84,14 @@ class AuthService(
 
         val userId = user.id ?: error("Failed to save user")
         val token = jwt.generateToken(userId, user.role)
-        return AuthResponse(token, userId, user.role.name, user.fullName)
+        return AuthResponse(
+            accessToken = token,
+            userId = userId,
+            role = user.role.name,
+            fullName = user.fullName,
+            schoolName = school.name,
+            homeroomClass = normalizedClass
+        )
     }
 
     @Transactional
@@ -91,7 +125,16 @@ class AuthService(
         val userId = user.id ?: error("Failed to save user")
         val studentId = student.id ?: error("Failed to save student")
         val token = jwt.generateToken(userId, user.role)
-        return AuthResponse(token, userId, user.role.name, user.fullName, studentId, teacher.user.fullName, normalizedClass)
+        return AuthResponse(
+            accessToken = token,
+            userId = userId,
+            role = user.role.name,
+            fullName = user.fullName,
+            studentId = studentId,
+            teacherFullName = teacher.user.fullName,
+            className = normalizedClass,
+            schoolName = school.name
+        )
     }
 
     @Transactional
