@@ -3,7 +3,12 @@ package com.diploma.ione.domain
 import jakarta.persistence.*
 
 @Entity
-@Table(name = "teachers")
+@Table(
+    name = "teachers",
+    uniqueConstraints = [
+        UniqueConstraint(name = "uk_teachers_school_homeroom_class", columnNames = ["school_id", "homeroom_class"])
+    ]
+)
 class Teacher(
     @Id
     var id: Long? = null,

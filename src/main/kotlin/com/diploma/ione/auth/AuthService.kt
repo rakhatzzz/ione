@@ -34,6 +34,10 @@ class AuthService(
     fun registerTeacher(req: RegisterTeacherRequest): AuthResponse {
         if (userRepo.existsByEmail(req.email)) error("Email already used")
         val school = schoolRepo.findById(req.schoolId).orElseThrow { error("School not found") }
+        val normalizedClass = req.homeroomClass.trim().uppercase().replace("\\s+".toRegex(), "")
+        if (teacherRepo.existsBySchoolIdAndHomeroomClass(school.id!!, normalizedClass)) {
+            error("Этот класс уже закреплён за другим учителем в этой школе")
+        }
 
         val user = User(
             fullName = req.fullName,
@@ -44,7 +48,7 @@ class AuthService(
 
         val teacher = Teacher(
             user = user,
-            homeroomClass = req.homeroomClass.trim().uppercase(),
+            homeroomClass = normalizedClass,
             school = school
         )
 

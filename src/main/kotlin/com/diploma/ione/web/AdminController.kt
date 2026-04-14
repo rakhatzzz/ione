@@ -303,7 +303,12 @@ class AdminController(
             userRepo.save(teacher.user)
         }
         req.homeroomClass?.let {
-            teacher.homeroomClass = it.trim().uppercase()
+            val normalizedClass = it.trim().uppercase().replace("\\s+".toRegex(), "")
+            if (normalizedClass.isBlank()) error("Homeroom class cannot be blank")
+            if (teacherRepo.existsBySchoolIdAndHomeroomClassAndIdNot(teacher.school.id!!, normalizedClass, teacher.id!!)) {
+                error("Этот класс уже закреплён за другим учителем в этой школе")
+            }
+            teacher.homeroomClass = normalizedClass
             teacherRepo.save(teacher)
         }
         return AdminTeacherDto(teacher.id!!, teacher.user.fullName, teacher.homeroomClass, emptyList())
