@@ -11,6 +11,8 @@ data class PublicSchoolDto(val id: Long, val name: String)
 
 data class PublicTeacherDto(val id: Long, val fullName: String)
 
+data class PublicClassDto(val className: String)
+
 @RestController
 @RequestMapping("/api/public")
 class PublicContentController(
@@ -70,7 +72,7 @@ class PublicContentController(
 
     @GetMapping("/schools/{schoolId}/teachers")
     fun getTeachersBySchool(@PathVariable schoolId: Long): List<PublicTeacherDto> {
-        val school = schoolRepo.findById(schoolId).orElseThrow { RuntimeException("School not found") }
+        schoolRepo.findById(schoolId).orElseThrow { RuntimeException("School not found") }
         return teacherRepo.findAll()
             .filter { it.school.id == schoolId }
             .map {
@@ -79,5 +81,17 @@ class PublicContentController(
                     fullName = it.user.fullName
                 )
             }
+    }
+
+    @GetMapping("/schools/{schoolId}/classes")
+    fun getClassesBySchool(@PathVariable schoolId: Long): List<PublicClassDto> {
+        schoolRepo.findById(schoolId).orElseThrow { RuntimeException("School not found") }
+        return teacherRepo.findAll()
+            .filter { it.school.id == schoolId }
+            .mapNotNull { it.homeroomClass?.trim() }
+            .filter { it.isNotBlank() }
+            .distinct()
+            .sorted()
+            .map { PublicClassDto(className = it) }
     }
 }

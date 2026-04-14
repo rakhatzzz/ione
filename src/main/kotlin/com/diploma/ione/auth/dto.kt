@@ -14,7 +14,9 @@ data class AuthResponse(
     val userId: Long,
     val role: String,
     val fullName: String,
-    val studentId: Long? = null  // Only for STUDENT role
+    val studentId: Long? = null,  // Only for STUDENT role
+    val teacherFullName: String? = null,
+    val className: String? = null
 )
 
 data class RegisterTeacherRequest(
@@ -30,8 +32,7 @@ data class RegisterStudentRequest(
     @field:Email @field:NotBlank val email: String,
     @field:NotBlank val password: String,
     @field:NotNull val schoolId: Long,
-    @field:NotNull val teacherId: Long,
-    val className: String? = null
+    @field:NotBlank val className: String
 )
 
 data class RegisterAdminRequest(

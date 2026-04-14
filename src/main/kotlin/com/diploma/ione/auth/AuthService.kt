@@ -64,10 +64,12 @@ class AuthService(
     fun registerStudent(req: RegisterStudentRequest): AuthResponse {
         if (userRepo.existsByEmail(req.email)) error("Email already used")
         val school = schoolRepo.findById(req.schoolId).orElseThrow { error("School not found") }
-        val teacher = teacherRepo.findById(req.teacherId).orElseThrow { error("Teacher not found") }
+        val normalizedClass = req.className.trim().uppercase().replace("\\s+".toRegex(), "")
+        if (normalizedClass.isBlank()) error("Class name cannot be blank")
 
-        // защита: ученик должен выбирать учителя той же школы
-        if (teacher.school.id != school.id) error("Teacher must be from the same school")
+        val teacher =
+            teacherRepo.findBySchoolIdAndHomeroomClass(school.id!!, normalizedClass)
+                ?: error("Для выбранного класса не найден классный руководитель")
 
         val user = User(
             fullName = req.fullName,
@@ -80,7 +82,7 @@ class AuthService(
             user = user,
             school = school,
             teacher = teacher,
-            className = req.className
+            className = normalizedClass
         )
 
         // Save student - cascade=PERSIST will save user automatically
@@ -89,7 +91,7 @@ class AuthService(
         val userId = user.id ?: error("Failed to save user")
         val studentId = student.id ?: error("Failed to save student")
         val token = jwt.generateToken(userId, user.role)
-        return AuthResponse(token, userId, user.role.name, user.fullName, studentId)
+        return AuthResponse(token, userId, user.role.name, user.fullName, studentId, teacher.user.fullName, normalizedClass)
     }
 
     @Transactional
