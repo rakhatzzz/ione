@@ -21,6 +21,7 @@ data class RegisterTeacherRequest(
     @field:NotBlank val fullName: String,
     @field:Email @field:NotBlank val email: String,
     @field:NotBlank val password: String,
+    @field:NotBlank val homeroomClass: String,
     @field:NotNull val schoolId: Long
 )
 

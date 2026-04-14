@@ -13,6 +13,9 @@ class Teacher(
     @JoinColumn(name = "id", nullable = false, unique = true)
     var user: User,
 
+    @Column(name = "homeroom_class", length = 16)
+    var homeroomClass: String? = null,
+
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "school_id", nullable = false)
     var school: School

@@ -44,6 +44,7 @@ class AuthService(
 
         val teacher = Teacher(
             user = user,
+            homeroomClass = req.homeroomClass.trim().uppercase(),
             school = school
         )
 

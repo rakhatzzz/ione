@@ -25,7 +25,7 @@ data class AdminDashboardDto(
 
 data class AdminSchoolDto(val id: Long, val name: String, val teachers: List<AdminTeacherDto>)
 
-data class AdminTeacherDto(val id: Long, val fullName: String, val students: List<AdminStudentDto>)
+data class AdminTeacherDto(val id: Long, val fullName: String, val homeroomClass: String?, val students: List<AdminStudentDto>)
 
 data class AdminStudentDto(val id: Long, val fullName: String, val className: String?)
 
@@ -102,7 +102,7 @@ data class CreateSchoolRequest(val name: String, val address: String?)
 
 data class UpdateSchoolRequest(val name: String?, val address: String?)
 
-data class UpdateTeacherRequest(val fullName: String?)
+data class UpdateTeacherRequest(val fullName: String?, val homeroomClass: String?)
 
 data class UpdateStudentRequest(val fullName: String?, val className: String?)
 
@@ -185,6 +185,7 @@ class AdminController(
                                 AdminTeacherDto(
                                         id = teacher.id!!,
                                         fullName = teacher.user.fullName,
+                                        homeroomClass = teacher.homeroomClass,
                                         students = studentDtos
                                 )
                             }
@@ -301,7 +302,11 @@ class AdminController(
             teacher.user.fullName = it
             userRepo.save(teacher.user)
         }
-        return AdminTeacherDto(teacher.id!!, teacher.user.fullName, emptyList())
+        req.homeroomClass?.let {
+            teacher.homeroomClass = it.trim().uppercase()
+            teacherRepo.save(teacher)
+        }
+        return AdminTeacherDto(teacher.id!!, teacher.user.fullName, teacher.homeroomClass, emptyList())
     }
 
     @PostMapping("/teachers/delete/{id}")
