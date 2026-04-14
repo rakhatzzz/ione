@@ -27,6 +27,83 @@ class StudentScenarioController(
     private val answerRepo: StudentScenarioAnswerRepo,
     private val progressRepo: StudentLessonProgressRepo
 ) {
+    @GetMapping("/courses/{courseId}/lessons/{lessonId}/scenarios")
+    fun getLessonScenarios(
+        @PathVariable courseId: Long,
+        @PathVariable lessonId: Long
+    ): StudentLessonScenariosDto {
+        val studentId = AuthUtil.currentUserId()
+        val lesson =
+            lessonRepo.findById(lessonId).orElseThrow {
+                ResponseStatusException(HttpStatus.NOT_FOUND, "Урок не найден")
+            }
+        if (lesson.course.id != courseId) {
+            throw ResponseStatusException(HttpStatus.NOT_FOUND, "Урок не относится к этому курсу")
+        }
+
+        val scenarios = scenarioRepo.findAllByLessonId(lessonId).sortedBy { it.id ?: 0L }
+        if (scenarios.isEmpty()) {
+            return StudentLessonScenariosDto(hasScenarios = false, scenarios = emptyList())
+        }
+
+        val lessonCompleted =
+            progressRepo.findByStudentIdAndLessonId(studentId, lessonId)?.status ==
+                LessonProgressStatus.COMPLETED
+
+        val dtoList =
+            scenarios.map { scenario ->
+                val scenarioId = scenario.id!!
+                val existing = answerRepo.findByStudentIdAndScenarioId(studentId, scenarioId)
+                if (existing != null) {
+                    val opt = existing.selectedOption
+                    StudentLessonScenarioDto(
+                        available = false,
+                        completed = true,
+                        hasScenario = true,
+                        scenarioId = scenarioId,
+                        title = scenario.title,
+                        description = scenario.description,
+                        baseImageUrl = ScenarioMediaUrls.resolve(scenario.baseImagePath),
+                        options = emptyList(),
+                        message = null,
+                        selectedOptionText = opt.optionText,
+                        resultText = opt.resultText,
+                        resultImageUrl = ScenarioMediaUrls.resolve(opt.resultImagePath)
+                    )
+                } else if (!lessonCompleted) {
+                    StudentLessonScenarioDto(
+                        available = false,
+                        completed = false,
+                        hasScenario = true,
+                        scenarioId = scenarioId,
+                        title = scenario.title,
+                        description = scenario.description,
+                        baseImageUrl = null,
+                        options = emptyList(),
+                        message = "Сначала завершите урок, чтобы открыть ситуационный тест."
+                    )
+                } else {
+                    val options =
+                        optionRepo.findAllByScenarioId(scenarioId).map {
+                            StudentScenarioOptionDto(it.id!!, it.optionText)
+                        }
+                    StudentLessonScenarioDto(
+                        available = true,
+                        completed = false,
+                        hasScenario = true,
+                        scenarioId = scenarioId,
+                        title = scenario.title,
+                        description = scenario.description,
+                        baseImageUrl = ScenarioMediaUrls.resolve(scenario.baseImagePath),
+                        options = options,
+                        message = null
+                    )
+                }
+            }
+
+        return StudentLessonScenariosDto(hasScenarios = true, scenarios = dtoList)
+    }
+
     @GetMapping("/courses/{courseId}/lessons/{lessonId}/scenario")
     fun getLessonScenario(
         @PathVariable courseId: Long,
@@ -41,7 +118,7 @@ class StudentScenarioController(
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Урок не относится к этому курсу")
         }
 
-        // Если к уроку привязано несколько сценариев (вариантов), для ученика берём первый по id.
+        // Backward-compatible endpoint: берём первый сценарий по id.
         val scenario =
             scenarioRepo.findFirstByLessonIdOrderByIdAsc(lessonId)
                 ?: return StudentLessonScenarioDto(available = false, completed = false, hasScenario = false)

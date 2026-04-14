@@ -50,3 +50,9 @@ data class StudentLessonScenarioDto(
     val resultText: String? = null,
     val resultImageUrl: String? = null
 )
+
+data class StudentLessonScenariosDto(
+    /** false, если для урока вообще нет сценариев в системе */
+    val hasScenarios: Boolean = false,
+    val scenarios: List<StudentLessonScenarioDto> = emptyList()
+)
