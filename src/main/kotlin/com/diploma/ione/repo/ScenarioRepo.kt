@@ -5,5 +5,6 @@ import org.springframework.data.jpa.repository.JpaRepository
 import java.util.Optional
 
 interface ScenarioRepo : JpaRepository<Scenario, Long> {
-    fun findByLessonId(lessonId: Long): Optional<Scenario>
+    fun findAllByLessonId(lessonId: Long): List<Scenario>
+    fun findFirstByLessonIdOrderByIdAsc(lessonId: Long): Scenario?
 }

@@ -41,8 +41,10 @@ class StudentScenarioController(
             throw ResponseStatusException(HttpStatus.NOT_FOUND, "Урок не относится к этому курсу")
         }
 
-        val scenario = scenarioRepo.findByLessonId(lessonId).orElse(null)
-            ?: return StudentLessonScenarioDto(available = false, completed = false, hasScenario = false)
+        // Если к уроку привязано несколько сценариев (вариантов), для ученика берём первый по id.
+        val scenario =
+            scenarioRepo.findFirstByLessonIdOrderByIdAsc(lessonId)
+                ?: return StudentLessonScenarioDto(available = false, completed = false, hasScenario = false)
 
         val lessonCompleted =
             progressRepo.findByStudentIdAndLessonId(studentId, lessonId)?.status ==
