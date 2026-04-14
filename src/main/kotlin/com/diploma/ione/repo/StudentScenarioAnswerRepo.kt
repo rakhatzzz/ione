@@ -5,4 +5,5 @@ import org.springframework.data.jpa.repository.JpaRepository
 
 interface StudentScenarioAnswerRepo : JpaRepository<StudentScenarioAnswer, Long> {
     fun findByStudentIdAndScenarioId(studentId: Long, scenarioId: Long): StudentScenarioAnswer?
+    fun findAllByStudentIdAndScenarioLessonCourseId(studentId: Long, courseId: Long): List<StudentScenarioAnswer>
 }
