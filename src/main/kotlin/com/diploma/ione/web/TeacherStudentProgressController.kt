@@ -18,6 +18,7 @@ data class TeacherScenarioProgressDto(
     val title: String,
     val completed: Boolean,
     val selectedOptionText: String?,
+    val selectedOptionScore: Int?,
     val resultText: String?
 )
 
@@ -90,6 +91,7 @@ class TeacherStudentProgressController(
                                     title = scenario.title ?: "Сценарий #${scenario.id}",
                                     completed = answer != null,
                                     selectedOptionText = answer?.selectedOption?.optionText,
+                                    selectedOptionScore = answer?.selectedOption?.score,
                                     resultText = answer?.selectedOption?.resultText
                                 )
                             }
