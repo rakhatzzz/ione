@@ -33,6 +33,7 @@ class SecurityConfig(
             allowedHeaders = listOf("*")
             allowedMethods = listOf("*")
             allowCredentials = true
+            
         }
 
         return UrlBasedCorsConfigurationSource().apply {
