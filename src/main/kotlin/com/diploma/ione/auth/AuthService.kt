@@ -28,7 +28,7 @@ class AuthService(
         }
         val token = jwt.generateToken(user.id!!, user.role)
         val userId = user.id!!
-        return when (user.role) {
+        return when (user.role) {)
             Role.STUDENT -> {
                 val student = studentRepo.findById(userId).orElse(null)
                 AuthResponse(
