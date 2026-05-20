@@ -6,6 +6,7 @@ import com.diploma.ione.repo.LessonTicketAttachmentRepo
 import com.diploma.ione.repo.LessonTicketMessageRepo
 import com.diploma.ione.repo.LessonTicketRepo
 import com.diploma.ione.repo.TeacherRepo
+import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
@@ -19,7 +20,8 @@ class TeacherLessonTicketController(
     private val teacherRepo: TeacherRepo,
     private val ticketRepo: LessonTicketRepo,
     private val attachmentRepo: LessonTicketAttachmentRepo,
-    private val messageRepo: LessonTicketMessageRepo
+    private val messageRepo: LessonTicketMessageRepo,
+    private val messagingTemplate: SimpMessagingTemplate
 ) {
     companion object {
         const val MULTIPART_FORM = "multipart/form-data"
@@ -69,15 +71,16 @@ class TeacherLessonTicketController(
         ticket.updatedAt = LocalDateTime.now()
         ticketRepo.save(ticket)
 
-        return ResponseEntity.ok(
-            LessonTicketMessageDto(
-                id = msg.id!!,
-                sender = msg.sender.name,
-                senderUserId = msg.senderUserId,
-                text = msg.text,
-                createdAt = msg.createdAt.toString()
-            )
+        val dto = LessonTicketMessageDto(
+            id = msg.id!!,
+            sender = msg.sender.name,
+            senderUserId = msg.senderUserId,
+            text = msg.text,
+            createdAt = msg.createdAt.toString()
         )
+
+        messagingTemplate.convertAndSend("/topic/lesson-tickets/$ticketId/chat", dto)
+        return ResponseEntity.ok(dto)
     }
 
     private val baseMediaDir = File("media")

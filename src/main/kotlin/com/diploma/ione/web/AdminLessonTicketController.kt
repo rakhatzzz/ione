@@ -11,8 +11,11 @@ import com.diploma.ione.repo.LessonRepo
 import com.diploma.ione.repo.LessonTicketAttachmentRepo
 import com.diploma.ione.repo.LessonTicketRepo
 import com.diploma.ione.repo.LessonTicketMessageRepo
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
+import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.web.bind.annotation.*
+import java.io.File
 import java.time.LocalDateTime
 
 data class UpdateLessonTicketStatusRequest(
@@ -35,10 +38,12 @@ class AdminLessonTicketController(
     private val attachmentRepo: LessonTicketAttachmentRepo,
     private val messageRepo: LessonTicketMessageRepo,
     private val courseRepo: CourseRepo,
-    private val lessonRepo: LessonRepo
+    private val lessonRepo: LessonRepo,
+    private val messagingTemplate: SimpMessagingTemplate,
+    @Value("${media.root:media}") private val mediaRoot: String
 ) {
 
-    private val baseMediaDir = java.io.File("media")
+    private val baseMediaDir = File(mediaRoot)
 
     @GetMapping("/lesson-tickets")
     fun allTickets(@RequestParam(required = false) status: String?): List<LessonTicketDto> {
@@ -121,15 +126,16 @@ class AdminLessonTicketController(
         ticket.updatedAt = LocalDateTime.now()
         ticketRepo.save(ticket)
 
-        return ResponseEntity.ok(
-            LessonTicketMessageDto(
-                id = msg.id!!,
-                sender = msg.sender.name,
-                senderUserId = msg.senderUserId,
-                text = msg.text,
-                createdAt = msg.createdAt.toString()
-            )
+        val dto = LessonTicketMessageDto(
+            id = msg.id!!,
+            sender = msg.sender.name,
+            senderUserId = msg.senderUserId,
+            text = msg.text,
+            createdAt = msg.createdAt.toString()
         )
+
+        messagingTemplate.convertAndSend("/topic/lesson-tickets/$ticketId/chat", dto)
+        return ResponseEntity.ok(dto)
     }
 
     @PostMapping("/lesson-tickets/{ticketId}/chat/close")
@@ -138,6 +144,8 @@ class AdminLessonTicketController(
         ticket.chatClosed = true
         ticket.updatedAt = LocalDateTime.now()
         ticketRepo.save(ticket)
+
+        messagingTemplate.convertAndSend("/topic/lesson-tickets/$ticketId/chat-closed", mapOf("chatClosed" to true))
         return ResponseEntity.ok(mapOf("chatClosed" to true))
     }
 
