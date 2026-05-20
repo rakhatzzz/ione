@@ -25,6 +25,18 @@ data class LessonTicketAttachmentDto(
     val createdAt: String
 )
 
+data class LessonTicketMessageDto(
+    val id: Long,
+    val sender: String,
+    val senderUserId: Long,
+    val text: String,
+    val createdAt: String
+)
+
+data class CreateLessonTicketMessageRequest(
+    val text: String
+)
+
 data class LessonTicketDto(
     val id: Long,
     val teacherId: Long,
@@ -45,10 +57,66 @@ data class LessonTicketDto(
 class TeacherLessonTicketController(
     private val teacherRepo: TeacherRepo,
     private val ticketRepo: LessonTicketRepo,
-    private val attachmentRepo: LessonTicketAttachmentRepo
+    private val attachmentRepo: LessonTicketAttachmentRepo,
+    private val messageRepo: LessonTicketMessageRepo
 ) {
     companion object {
         const val MULTIPART_FORM = "multipart/form-data"
+    }
+
+    @GetMapping("/lesson-tickets/{ticketId}/chat")
+    fun myTicketChat(@PathVariable ticketId: Long): List<LessonTicketMessageDto> {
+        val teacherId = AuthUtil.currentUserId()
+        teacherRepo.findById(teacherId).orElseThrow { error("Teacher not found") }
+
+        val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
+        if (ticket.teacher.id != teacherId) error("Forbidden")
+
+        return messageRepo.findAllByTicketIdOrderByCreatedAtAsc(ticketId).map { m ->
+            LessonTicketMessageDto(
+                id = m.id!!,
+                sender = m.sender.name,
+                senderUserId = m.senderUserId,
+                text = m.text,
+                createdAt = m.createdAt.toString()
+            )
+        }
+    }
+
+    @PostMapping("/lesson-tickets/{ticketId}/chat/send")
+    fun sendChatMessage(@PathVariable ticketId: Long, @RequestBody req: CreateLessonTicketMessageRequest): ResponseEntity<Any> {
+        val teacherId = AuthUtil.currentUserId()
+        teacherRepo.findById(teacherId).orElseThrow { error("Teacher not found") }
+
+        val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
+        if (ticket.teacher.id != teacherId) error("Forbidden")
+        if (ticket.chatClosed) error("Chat is closed")
+
+        val text = req.text.trim()
+        if (text.isBlank()) error("Text cannot be blank")
+
+        val msg = messageRepo.save(
+            LessonTicketMessage(
+                ticket = ticket,
+                sender = LessonTicketMessageSender.TEACHER,
+                senderUserId = teacherId,
+                text = text,
+                createdAt = LocalDateTime.now()
+            )
+        )
+
+        ticket.updatedAt = LocalDateTime.now()
+        ticketRepo.save(ticket)
+
+        return ResponseEntity.ok(
+            LessonTicketMessageDto(
+                id = msg.id!!,
+                sender = msg.sender.name,
+                senderUserId = msg.senderUserId,
+                text = msg.text,
+                createdAt = msg.createdAt.toString()
+            )
+        )
     }
 
     private val baseMediaDir = File("media")

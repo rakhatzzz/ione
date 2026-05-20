@@ -36,6 +36,9 @@ class LessonTicket(
     @Column(name = "suggested_course_id")
     var suggestedCourseId: Long? = null,
 
+    @Column(name = "chat_closed", nullable = false)
+    var chatClosed: Boolean = false,
+
     @Column(name = "created_at", nullable = false)
     var createdAt: LocalDateTime = LocalDateTime.now(),
 

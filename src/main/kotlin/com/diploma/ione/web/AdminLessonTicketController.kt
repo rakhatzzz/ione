@@ -2,10 +2,13 @@ package com.diploma.ione.web
 
 import com.diploma.ione.domain.Lesson
 import com.diploma.ione.domain.LessonTicketStatus
+import com.diploma.ione.domain.LessonTicketMessage
+import com.diploma.ione.domain.LessonTicketMessageSender
 import com.diploma.ione.repo.CourseRepo
 import com.diploma.ione.repo.LessonRepo
 import com.diploma.ione.repo.LessonTicketAttachmentRepo
 import com.diploma.ione.repo.LessonTicketRepo
+import com.diploma.ione.repo.LessonTicketMessageRepo
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import java.time.LocalDateTime
@@ -23,11 +26,40 @@ data class CreateLessonFromTicketRequest(
     val orderNumber: Int?
 )
 
+data class LessonTicketDto(
+    val id: Long,
+    val teacherId: Long,
+    val teacherName: String,
+    val title: String,
+    val description: String?,
+    val status: String,
+    val adminNote: String?,
+    val createdLessonId: Long?,
+    val suggestedCourseId: Long?,
+    val chatClosed: Boolean,
+    val createdAt: String,
+    val updatedAt: String,
+    val attachments: List<LessonTicketAttachmentDto>
+)
+
+data class LessonTicketMessageDto(
+    val id: Long,
+    val sender: String,
+    val senderUserId: Long,
+    val text: String,
+    val createdAt: String
+)
+
+data class CreateLessonTicketMessageRequest(
+    val text: String
+)
+
 @RestController
 @RequestMapping("/api/admin")
 class AdminLessonTicketController(
     private val ticketRepo: LessonTicketRepo,
     private val attachmentRepo: LessonTicketAttachmentRepo,
+    private val messageRepo: LessonTicketMessageRepo,
     private val courseRepo: CourseRepo,
     private val lessonRepo: LessonRepo
 ) {
@@ -58,21 +90,81 @@ class AdminLessonTicketController(
                     createdAt = a.createdAt.toString()
                 )
             }
-            LessonTicketDto(
-                id = t.id!!,
-                teacherId = t.teacher.id!!,
-                teacherName = t.teacher.user.fullName,
-                title = t.title,
-                description = t.description,
-                status = t.status.name,
-                adminNote = t.adminNote,
-                createdLessonId = t.createdLessonId,
-                suggestedCourseId = t.suggestedCourseId,
-                createdAt = t.createdAt.toString(),
-                updatedAt = t.updatedAt.toString(),
-                attachments = atts
+            toDto(t, atts)
+        }
+    }
+
+    private fun toDto(t: LessonTicket, attachments: List<LessonTicketAttachmentDto>): LessonTicketDto =
+        LessonTicketDto(
+            id = t.id!!,
+            teacherId = t.teacher.id!!,
+            teacherName = t.teacher.user.fullName,
+            title = t.title,
+            description = t.description,
+            status = t.status.name,
+            adminNote = t.adminNote,
+            createdLessonId = t.createdLessonId,
+            suggestedCourseId = t.suggestedCourseId,
+            chatClosed = t.chatClosed,
+            createdAt = t.createdAt.toString(),
+            updatedAt = t.updatedAt.toString(),
+            attachments = attachments
+        )
+
+    @GetMapping("/lesson-tickets/{ticketId}/chat")
+    fun ticketChat(@PathVariable ticketId: Long): List<LessonTicketMessageDto> {
+        ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
+        return messageRepo.findAllByTicketIdOrderByCreatedAtAsc(ticketId).map { m ->
+            LessonTicketMessageDto(
+                id = m.id!!,
+                sender = m.sender.name,
+                senderUserId = m.senderUserId,
+                text = m.text,
+                createdAt = m.createdAt.toString()
             )
         }
+    }
+
+    @PostMapping("/lesson-tickets/{ticketId}/chat/send")
+    fun sendChatMessage(@PathVariable ticketId: Long, @RequestBody req: CreateLessonTicketMessageRequest): ResponseEntity<Any> {
+        val adminUserId = AuthUtil.currentUserId()
+        val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
+        if (ticket.chatClosed) error("Chat is closed")
+
+        val text = req.text.trim()
+        if (text.isBlank()) error("Text cannot be blank")
+
+        val msg = messageRepo.save(
+            LessonTicketMessage(
+                ticket = ticket,
+                sender = LessonTicketMessageSender.ADMIN,
+                senderUserId = adminUserId,
+                text = text,
+                createdAt = LocalDateTime.now()
+            )
+        )
+
+        ticket.updatedAt = LocalDateTime.now()
+        ticketRepo.save(ticket)
+
+        return ResponseEntity.ok(
+            LessonTicketMessageDto(
+                id = msg.id!!,
+                sender = msg.sender.name,
+                senderUserId = msg.senderUserId,
+                text = msg.text,
+                createdAt = msg.createdAt.toString()
+            )
+        )
+    }
+
+    @PostMapping("/lesson-tickets/{ticketId}/chat/close")
+    fun closeChat(@PathVariable ticketId: Long): ResponseEntity<Any> {
+        val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
+        ticket.chatClosed = true
+        ticket.updatedAt = LocalDateTime.now()
+        ticketRepo.save(ticket)
+        return ResponseEntity.ok(mapOf("chatClosed" to true))
     }
 
     @PostMapping("/lesson-tickets/{ticketId}/status")
