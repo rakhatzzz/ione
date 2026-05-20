@@ -6,4 +6,5 @@ import org.springframework.data.jpa.repository.JpaRepository
 interface LessonTicketAttachmentRepo : JpaRepository<LessonTicketAttachment, Long> {
     fun findAllByTicketIdOrderByCreatedAtAsc(ticketId: Long): List<LessonTicketAttachment>
     fun deleteAllByTicketId(ticketId: Long)
+    fun countByTicketId(ticketId: Long): Long
 }

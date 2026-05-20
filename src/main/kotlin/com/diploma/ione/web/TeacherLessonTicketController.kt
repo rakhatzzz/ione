@@ -48,6 +48,8 @@ class TeacherLessonTicketController(
     private val attachmentRepo: LessonTicketAttachmentRepo
 ) {
     private val baseMediaDir = File("media")
+    private val maxAttachmentsPerTicket = 10
+    private val maxAttachmentBytes = 25L * 1024L * 1024L
 
     init {
         File(baseMediaDir, "ticket-attachments").mkdirs()
@@ -71,29 +73,32 @@ class TeacherLessonTicketController(
         return toDto(saved, emptyList())
     }
 
-    @PostMapping("/lesson-tickets/add-with-attachment")
+    @PostMapping("/lesson-tickets/create-with-attachment", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
     fun createTicketWithAttachment(
-        @RequestParam("title") title: String,
-        @RequestParam("description", required = false) description: String?,
-        @RequestParam("file", required = false) file: MultipartFile?
+        @RequestPart("ticket") ticket: CreateLessonTicketRequest,
+        @RequestPart("file", required = false) file: MultipartFile?
     ): LessonTicketDto {
         val teacherId = AuthUtil.currentUserId()
         val teacher = teacherRepo.findById(teacherId).orElseThrow { error("Teacher not found") }
 
-        val t = title.trim()
+        val t = ticket.title.trim()
         if (t.isBlank()) error("Title cannot be blank")
 
-        val ticket = LessonTicket(
+        val description = ticket.description?.trim()?.takeIf { it.isNotBlank() }
+
+        val savedTicket = ticketRepo.save(LessonTicket(
             teacher = teacher,
             title = t,
-            description = description?.trim()?.takeIf { it.isNotBlank() }
-        )
-
-        val savedTicket = ticketRepo.save(ticket)
+            description = description
+        ))
 
         val attachments = mutableListOf<LessonTicketAttachmentDto>()
 
         if (file != null && !file.isEmpty) {
+            if (file.size > maxAttachmentBytes) error("File too large. Max 25MB")
+            val existingCount = attachmentRepo.countByTicketId(savedTicket.id!!).toInt()
+            if (existingCount >= maxAttachmentsPerTicket) error("Too many attachments. Max 10")
+
             val originalFilename = file.originalFilename ?: "file"
             val kind = guessKind(originalFilename)
 
@@ -169,6 +174,10 @@ class TeacherLessonTicketController(
 
         val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
         if (ticket.teacher.id != teacherId) error("Forbidden")
+        if (file.size > maxAttachmentBytes) error("File too large. Max 25MB")
+
+        val existingCount = attachmentRepo.countByTicketId(ticketId).toInt()
+        if (existingCount >= maxAttachmentsPerTicket) error("Too many attachments. Max 10")
         if (file.isEmpty) return ResponseEntity.badRequest().body(mapOf("error" to "Файл пустой"))
 
         val originalFilename = file.originalFilename ?: "file"
