@@ -47,6 +47,10 @@ class TeacherLessonTicketController(
     private val ticketRepo: LessonTicketRepo,
     private val attachmentRepo: LessonTicketAttachmentRepo
 ) {
+    companion object {
+        const val MULTIPART_FORM = "multipart/form-data"
+    }
+
     private val baseMediaDir = File("media")
     private val maxAttachmentsPerTicket = 10
     private val maxAttachmentBytes = 25L * 1024L * 1024L
@@ -73,7 +77,7 @@ class TeacherLessonTicketController(
         return toDto(saved, emptyList())
     }
 
-    @PostMapping("/lesson-tickets/create-with-attachment", consumes = [MediaType.MULTIPART_FORM_DATA_VALUE])
+    @PostMapping("/lesson-tickets/create-with-attachment", consumes = [MULTIPART_FORM])
     fun createTicketWithAttachment(
         @RequestPart("ticket") ticket: CreateLessonTicketRequest,
         @RequestPart("file", required = false) file: MultipartFile?
