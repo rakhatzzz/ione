@@ -79,7 +79,7 @@ class AdminLessonTicketController(
             adminNote = t.adminNote,
             createdLessonId = t.createdLessonId,
             suggestedCourseId = t.suggestedCourseId,
-            chatClosed = t.chatClosed,
+            chatClosed = (t.chatClosed == true),
             createdAt = t.createdAt.toString(),
             updatedAt = t.updatedAt.toString(),
             attachments = attachments
@@ -103,7 +103,7 @@ class AdminLessonTicketController(
     fun sendChatMessage(@PathVariable ticketId: Long, @RequestBody req: CreateLessonTicketMessageRequest): ResponseEntity<Any> {
         val adminUserId = AuthUtil.currentUserId()
         val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
-        if (ticket.chatClosed) error("Chat is closed")
+        if (ticket.chatClosed == true) error("Chat is closed")
 
         val text = req.text.trim()
         if (text.isBlank()) error("Text cannot be blank")
@@ -173,7 +173,7 @@ class AdminLessonTicketController(
                 adminNote = saved.adminNote,
                 createdLessonId = saved.createdLessonId,
                 suggestedCourseId = saved.suggestedCourseId,
-                chatClosed = saved.chatClosed,
+                chatClosed = (saved.chatClosed == true),
                 createdAt = saved.createdAt.toString(),
                 updatedAt = saved.updatedAt.toString(),
                 attachments = atts
