@@ -40,7 +40,7 @@ class AdminLessonTicketController(
     private val courseRepo: CourseRepo,
     private val lessonRepo: LessonRepo,
     private val messagingTemplate: SimpMessagingTemplate,
-    @Value("${media.root:media}") private val mediaRoot: String
+    @Value("\${media.root:media}") private val mediaRoot: String
 ) {
 
     private val baseMediaDir = File(mediaRoot)
