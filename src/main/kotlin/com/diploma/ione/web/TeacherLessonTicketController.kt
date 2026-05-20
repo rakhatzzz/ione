@@ -71,6 +71,69 @@ class TeacherLessonTicketController(
         return toDto(saved, emptyList())
     }
 
+    @PostMapping("/lesson-tickets/add-with-attachment")
+    fun createTicketWithAttachment(
+        @RequestParam("title") title: String,
+        @RequestParam("description", required = false) description: String?,
+        @RequestParam("file", required = false) file: MultipartFile?
+    ): LessonTicketDto {
+        val teacherId = AuthUtil.currentUserId()
+        val teacher = teacherRepo.findById(teacherId).orElseThrow { error("Teacher not found") }
+
+        val t = title.trim()
+        if (t.isBlank()) error("Title cannot be blank")
+
+        val ticket = LessonTicket(
+            teacher = teacher,
+            title = t,
+            description = description?.trim()?.takeIf { it.isNotBlank() }
+        )
+
+        val savedTicket = ticketRepo.save(ticket)
+
+        val attachments = mutableListOf<LessonTicketAttachmentDto>()
+
+        if (file != null && !file.isEmpty) {
+            val originalFilename = file.originalFilename ?: "file"
+            val kind = guessKind(originalFilename)
+
+            val safeName = originalFilename.replace("..", "_").replace("/", "_").replace("\\\\", "_")
+            val randomFilename = UUID.randomUUID().toString() + "_" + safeName
+
+            val subFolder = "ticket-attachments/$teacherId"
+            File(baseMediaDir, subFolder).mkdirs()
+
+            val targetFile = File(baseMediaDir, "$subFolder/$randomFilename")
+            file.transferTo(targetFile.absoluteFile)
+
+            val fileUrl = "/media/$subFolder/$randomFilename"
+
+            val att = LessonTicketAttachment(
+                ticket = savedTicket,
+                fileUrl = fileUrl,
+                originalName = originalFilename,
+                kind = kind,
+                createdAt = LocalDateTime.now()
+            )
+
+            savedTicket.updatedAt = LocalDateTime.now()
+            ticketRepo.save(savedTicket)
+
+            val savedAtt = attachmentRepo.save(att)
+            attachments.add(
+                LessonTicketAttachmentDto(
+                    id = savedAtt.id!!,
+                    fileUrl = savedAtt.fileUrl,
+                    originalName = savedAtt.originalName,
+                    kind = savedAtt.kind.name,
+                    createdAt = savedAtt.createdAt.toString()
+                )
+            )
+        }
+
+        return toDto(savedTicket, attachments)
+    }
+
     @GetMapping("/lesson-tickets/mine")
     fun myTickets(): List<LessonTicketDto> {
         val teacherId = AuthUtil.currentUserId()
@@ -145,6 +208,24 @@ class TeacherLessonTicketController(
         )
     }
 
+    @PostMapping("/lesson-tickets/{ticketId}/delete")
+    fun deleteMyTicket(@PathVariable ticketId: Long): ResponseEntity<Any> {
+        val teacherId = AuthUtil.currentUserId()
+        teacherRepo.findById(teacherId).orElseThrow { error("Teacher not found") }
+
+        val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
+        if (ticket.teacher.id != teacherId) error("Forbidden")
+
+        val attachments = attachmentRepo.findAllByTicketIdOrderByCreatedAtAsc(ticketId)
+        attachments.forEach { a ->
+            deleteMediaIfLocal(a.fileUrl)
+        }
+        attachmentRepo.deleteAllByTicketId(ticketId)
+        ticketRepo.delete(ticket)
+
+        return ResponseEntity.ok(mapOf("success" to true))
+    }
+
     private fun toDto(t: LessonTicket, attachments: List<LessonTicketAttachmentDto>): LessonTicketDto =
         LessonTicketDto(
             id = t.id!!,
@@ -168,6 +249,24 @@ class TeacherLessonTicketController(
             lower.matches(Regex(".*\\.(png|jpg|jpeg|gif|webp|bmp|svg)$")) -> LessonTicketAttachmentKind.IMAGE
             lower.matches(Regex(".*\\.(pdf|doc|docx|ppt|pptx|xls|xlsx|txt)$")) -> LessonTicketAttachmentKind.DOCUMENT
             else -> LessonTicketAttachmentKind.OTHER
+        }
+    }
+
+    private fun deleteMediaIfLocal(fileUrl: String) {
+        val normalized = fileUrl.trim()
+        if (!normalized.startsWith("/media/")) return
+
+        val rel = normalized.removePrefix("/media/").replace("..", "")
+        val f = File(baseMediaDir, rel)
+        try {
+            val basePath = baseMediaDir.canonicalFile.toPath()
+            val filePath = f.canonicalFile.toPath()
+            if (!filePath.startsWith(basePath)) return
+            if (f.exists() && f.isFile) {
+                f.delete()
+            }
+        } catch (_: Exception) {
+            // ignore
         }
     }
 }

@@ -32,6 +32,8 @@ class AdminLessonTicketController(
     private val lessonRepo: LessonRepo
 ) {
 
+    private val baseMediaDir = java.io.File("media")
+
     @GetMapping("/lesson-tickets")
     fun allTickets(@RequestParam(required = false) status: String?): List<LessonTicketDto> {
         val tickets = if (status.isNullOrBlank()) {
@@ -133,5 +135,38 @@ class AdminLessonTicketController(
         ticketRepo.save(ticket)
 
         return ResponseEntity.ok(mapOf("lessonId" to savedLesson.id, "ticketId" to ticket.id, "status" to ticket.status.name))
+    }
+
+    @PostMapping("/lesson-tickets/{ticketId}/delete")
+    fun deleteTicket(@PathVariable ticketId: Long): ResponseEntity<Any> {
+        val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
+
+        val attachments = attachmentRepo.findAllByTicketIdOrderByCreatedAtAsc(ticketId)
+        attachments.forEach { a ->
+            deleteMediaIfLocal(a.fileUrl)
+        }
+
+        attachmentRepo.deleteAllByTicketId(ticketId)
+        ticketRepo.delete(ticket)
+
+        return ResponseEntity.ok(mapOf("success" to true))
+    }
+
+    private fun deleteMediaIfLocal(fileUrl: String) {
+        val normalized = fileUrl.trim()
+        if (!normalized.startsWith("/media/")) return
+
+        val rel = normalized.removePrefix("/media/").replace("..", "")
+        val f = java.io.File(baseMediaDir, rel)
+        try {
+            val basePath = baseMediaDir.canonicalFile.toPath()
+            val filePath = f.canonicalFile.toPath()
+            if (!filePath.startsWith(basePath)) return
+            if (f.exists() && f.isFile) {
+                f.delete()
+            }
+        } catch (_: Exception) {
+            // ignore
+        }
     }
 }
