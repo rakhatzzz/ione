@@ -7,6 +7,7 @@ import com.diploma.ione.repo.LessonTicketMessageRepo
 import com.diploma.ione.repo.LessonTicketRepo
 import com.diploma.ione.repo.TeacherRepo
 import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
@@ -21,7 +22,8 @@ class TeacherLessonTicketController(
     private val ticketRepo: LessonTicketRepo,
     private val attachmentRepo: LessonTicketAttachmentRepo,
     private val messageRepo: LessonTicketMessageRepo,
-    private val messagingTemplate: SimpMessagingTemplate
+    private val messagingTemplate: SimpMessagingTemplate,
+    @Value("\${app.media.dir:media}") private val mediaDir: String
 ) {
     companion object {
         const val MULTIPART_FORM = "multipart/form-data"
@@ -83,7 +85,7 @@ class TeacherLessonTicketController(
         return ResponseEntity.ok(dto)
     }
 
-    private val baseMediaDir = File("media")
+    private val baseMediaDir = File(mediaDir)
     private val maxAttachmentsPerTicket = 10
     private val maxAttachmentBytes = 25L * 1024L * 1024L
 

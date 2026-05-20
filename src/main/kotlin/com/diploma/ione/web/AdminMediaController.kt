@@ -1,6 +1,7 @@
 package com.diploma.ione.web
 
 import org.springframework.http.ResponseEntity
+import org.springframework.beans.factory.annotation.Value
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.io.File
@@ -8,10 +9,11 @@ import java.util.UUID
 
 @RestController
 @RequestMapping("/api/admin/media")
-class AdminMediaController {
+class AdminMediaController(
+    @Value("\${app.media.dir:media}") private val mediaDir: String
+) {
 
-    // Создаем базовую папку media в корне бэкенд-проекта
-    private val baseMediaDir = File("media")
+    private val baseMediaDir = File(mediaDir)
 
     init {
         // При старте сервера автоматически создаем папки, если их еще нет
