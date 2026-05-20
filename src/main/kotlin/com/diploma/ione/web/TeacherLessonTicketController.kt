@@ -3,6 +3,7 @@ package com.diploma.ione.web
 import com.diploma.ione.auth.AuthUtil
 import com.diploma.ione.domain.*
 import com.diploma.ione.repo.LessonTicketAttachmentRepo
+import com.diploma.ione.repo.LessonTicketMessageRepo
 import com.diploma.ione.repo.LessonTicketRepo
 import com.diploma.ione.repo.TeacherRepo
 import org.springframework.http.ResponseEntity
@@ -11,46 +12,6 @@ import org.springframework.web.multipart.MultipartFile
 import java.io.File
 import java.time.LocalDateTime
 import java.util.UUID
-
-data class CreateLessonTicketRequest(
-    val title: String,
-    val description: String?
-)
-
-data class LessonTicketAttachmentDto(
-    val id: Long,
-    val fileUrl: String,
-    val originalName: String?,
-    val kind: String,
-    val createdAt: String
-)
-
-data class LessonTicketMessageDto(
-    val id: Long,
-    val sender: String,
-    val senderUserId: Long,
-    val text: String,
-    val createdAt: String
-)
-
-data class CreateLessonTicketMessageRequest(
-    val text: String
-)
-
-data class LessonTicketDto(
-    val id: Long,
-    val teacherId: Long,
-    val teacherName: String,
-    val title: String,
-    val description: String?,
-    val status: String,
-    val adminNote: String?,
-    val createdLessonId: Long?,
-    val suggestedCourseId: Long?,
-    val createdAt: String,
-    val updatedAt: String,
-    val attachments: List<LessonTicketAttachmentDto>
-)
 
 @RestController
 @RequestMapping("/api/teacher")
@@ -324,6 +285,7 @@ class TeacherLessonTicketController(
             adminNote = t.adminNote,
             createdLessonId = t.createdLessonId,
             suggestedCourseId = t.suggestedCourseId,
+            chatClosed = t.chatClosed,
             createdAt = t.createdAt.toString(),
             updatedAt = t.updatedAt.toString(),
             attachments = attachments

@@ -1,6 +1,8 @@
 package com.diploma.ione.web
 
+import com.diploma.ione.auth.AuthUtil
 import com.diploma.ione.domain.Lesson
+import com.diploma.ione.domain.LessonTicket
 import com.diploma.ione.domain.LessonTicketStatus
 import com.diploma.ione.domain.LessonTicketMessage
 import com.diploma.ione.domain.LessonTicketMessageSender
@@ -24,34 +26,6 @@ data class CreateLessonFromTicketRequest(
     val videoPath: String?,
     val textContent: String?,
     val orderNumber: Int?
-)
-
-data class LessonTicketDto(
-    val id: Long,
-    val teacherId: Long,
-    val teacherName: String,
-    val title: String,
-    val description: String?,
-    val status: String,
-    val adminNote: String?,
-    val createdLessonId: Long?,
-    val suggestedCourseId: Long?,
-    val chatClosed: Boolean,
-    val createdAt: String,
-    val updatedAt: String,
-    val attachments: List<LessonTicketAttachmentDto>
-)
-
-data class LessonTicketMessageDto(
-    val id: Long,
-    val sender: String,
-    val senderUserId: Long,
-    val text: String,
-    val createdAt: String
-)
-
-data class CreateLessonTicketMessageRequest(
-    val text: String
 )
 
 @RestController
@@ -199,6 +173,7 @@ class AdminLessonTicketController(
                 adminNote = saved.adminNote,
                 createdLessonId = saved.createdLessonId,
                 suggestedCourseId = saved.suggestedCourseId,
+                chatClosed = saved.chatClosed,
                 createdAt = saved.createdAt.toString(),
                 updatedAt = saved.updatedAt.toString(),
                 attachments = atts
