@@ -106,7 +106,10 @@ class TeacherLessonTicketController(
             val originalFilename = file.originalFilename ?: "file"
             val kind = guessKind(originalFilename)
 
-            val safeName = originalFilename.replace("..", "_").replace("/", "_").replace("\\\\", "_")
+            val safeName = originalFilename
+                .replace("..", "_")
+                .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+                .take(120)
             val randomFilename = UUID.randomUUID().toString() + "_" + safeName
 
             val subFolder = "ticket-attachments/$teacherId"
@@ -187,7 +190,10 @@ class TeacherLessonTicketController(
         val originalFilename = file.originalFilename ?: "file"
         val kind = guessKind(originalFilename)
 
-        val safeName = originalFilename.replace("..", "_").replace("/", "_").replace("\\\\", "_")
+        val safeName = originalFilename
+            .replace("..", "_")
+            .replace(Regex("[^a-zA-Z0-9._-]"), "_")
+            .take(120)
         val randomFilename = UUID.randomUUID().toString() + "_" + safeName
 
         val subFolder = "ticket-attachments/$teacherId"
