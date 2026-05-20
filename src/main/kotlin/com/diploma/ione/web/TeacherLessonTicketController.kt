@@ -9,6 +9,7 @@ import com.diploma.ione.repo.TeacherRepo
 import org.springframework.messaging.simp.SimpMessagingTemplate
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
 import org.springframework.web.multipart.MultipartFile
 import java.io.File
@@ -262,6 +263,7 @@ class TeacherLessonTicketController(
     }
 
     @PostMapping("/lesson-tickets/{ticketId}/delete")
+    @Transactional
     fun deleteMyTicket(@PathVariable ticketId: Long): ResponseEntity<Any> {
         val teacherId = AuthUtil.currentUserId()
         teacherRepo.findById(teacherId).orElseThrow { error("Teacher not found") }

@@ -14,6 +14,7 @@ import com.diploma.ione.repo.LessonTicketMessageRepo
 import org.springframework.beans.factory.annotation.Value
 import org.springframework.http.ResponseEntity
 import org.springframework.messaging.simp.SimpMessagingTemplate
+import org.springframework.transaction.annotation.Transactional
 import org.springframework.web.bind.annotation.*
 import java.io.File
 import java.time.LocalDateTime
@@ -213,6 +214,7 @@ class AdminLessonTicketController(
     }
 
     @PostMapping("/lesson-tickets/{ticketId}/delete")
+    @Transactional
     fun deleteTicket(@PathVariable ticketId: Long): ResponseEntity<Any> {
         val ticket = ticketRepo.findById(ticketId).orElseThrow { error("Ticket not found") }
 
