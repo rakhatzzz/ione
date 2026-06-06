@@ -1,6 +1,8 @@
 package com.diploma.ione.domain
 
 import jakarta.persistence.*
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 
 @Entity
 @Table(name = "lessons")
@@ -10,6 +12,7 @@ class Lesson(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "course_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var course: Course,
 
     @Column(nullable = false)

@@ -1,6 +1,8 @@
 package com.diploma.ione.domain
 
 import jakarta.persistence.*
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import java.time.LocalDateTime
 
 @Entity
@@ -15,10 +17,12 @@ class StudentLessonProgress(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "student_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var student: Student,
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "lesson_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var lesson: Lesson,
 
     @Enumerated(EnumType.STRING)

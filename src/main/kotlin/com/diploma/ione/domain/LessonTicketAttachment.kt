@@ -1,6 +1,8 @@
 package com.diploma.ione.domain
 
 import jakarta.persistence.*
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import java.time.LocalDateTime
 
 enum class LessonTicketAttachmentKind {
@@ -15,6 +17,7 @@ class LessonTicketAttachment(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "ticket_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var ticket: LessonTicket,
 
     @Column(name = "file_url", nullable = false)

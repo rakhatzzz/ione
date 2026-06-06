@@ -1,6 +1,8 @@
 package com.diploma.ione.domain
 
 import jakarta.persistence.*
+import org.hibernate.annotations.OnDelete
+import org.hibernate.annotations.OnDeleteAction
 import java.time.LocalDateTime
 
 enum class LessonTicketStatus {
@@ -15,6 +17,7 @@ class LessonTicket(
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "teacher_id", nullable = false)
+    @OnDelete(action = OnDeleteAction.CASCADE)
     var teacher: Teacher,
 
     @Column(nullable = false)
