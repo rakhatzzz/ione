@@ -4,7 +4,7 @@ import org.springframework.beans.factory.annotation.Value
 import org.springframework.context.annotation.Configuration
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry
 import org.springframework.web.servlet.config.annotation.WebMvcConfigurer
-import java.nio.file.Paths
+import java.io.File
 
 @Configuration
 class MediaConfig(
@@ -12,8 +12,10 @@ class MediaConfig(
 ) : WebMvcConfigurer {
 
     override fun addResourceHandlers(registry: ResourceHandlerRegistry) {
-        val location = Paths.get(mediaDir).toUri().toString()
+        val file = File(mediaDir)
+        val locationPath = file.toURI().toString()
         registry.addResourceHandler("/media/**")
-            .addResourceLocations(location)
+            .addResourceLocations(locationPath)
+            .setCachePeriod(3600)
     }
 }
